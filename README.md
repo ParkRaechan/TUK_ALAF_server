@@ -1,7 +1,7 @@
 # 📦 TUK_ALAF Server (TUK 분실물 찾기 프로젝트 서버)
 
 **TUK 분실물 찾기 키오스크 & 웹 서비스의 백엔드 서버**입니다.  
-Node.js(Express) 기반으로 구축되었으며, 키오스크(Flutter) 및 웹(React) 클라이언트와 통신하여 분실물 등록, 조회, 회수 신청, 보관함 제어 기능을 수행합니다.
+Node.js(Express) 기반으로 구축되었으며, 키오스크 및 웹(React) 클라이언트와 통신하여 분실물 등록, 조회, 회수 신청, 보관함 제어 기능을 수행합니다.
 
 ## 🚀 Key Features & Architecture
 
