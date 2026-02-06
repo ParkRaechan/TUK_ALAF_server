@@ -1,17 +1,42 @@
-// 1. 토큰 인증 미들웨어 (테스트용: 무조건 통과 + 1번 유저로 간주)
-exports.authenticateToken = (req, res, next) => {
-    // 실제로는 여기서 JWT 토큰을 검사해야 하지만,
-    // 지금은 테스트를 위해 "무조건 id가 1인 유저가 로그인했다"고 가정합니다.
-    req.user = { 
-        id: 1, 
-        role: 'ADMIN' // 관리자 테스트도 되게 일단 ADMIN으로 설정
-    };
-    console.log('✅ 인증 미들웨어 통과 (Test Mode)');
-    next(); // 다음 단계(Controller)로 넘어감
+const jwt = require('jsonwebtoken');
+const pool = require('../config/db');
+
+// 1. 토큰 인증 미들웨어 (Real Mode)
+exports.authenticateToken = async (req, res, next) => {
+    // 헤더에서 토큰 추출: "Bearer eyJhbGci..."
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ message: '로그인이 필요합니다. (토큰 없음)' });
+    }
+
+    try {
+        // 토큰 검증
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        // (선택) DB에 유저가 실제로 존재하는지 한 번 더 확인하면 더 안전함
+        // const [users] = await pool.query('SELECT * FROM Member WHERE member_id = ?', [decoded.id]);
+        // if (users.length === 0) throw new Error();
+
+        // req.user에 유저 정보 저장 (컨트롤러에서 사용 가능)
+        req.user = { 
+            id: decoded.id, 
+            role: decoded.role 
+        };
+        
+        next(); // 통과
+    } catch (err) {
+        console.error('JWT 인증 실패:', err.message);
+        return res.status(403).json({ message: '유효하지 않은 토큰입니다.' });
+    }
 };
 
-// 2. 관리자 권한 확인 미들웨어 (테스트용: 무조건 통과)
+// 2. 관리자 권한 확인
 exports.isAdmin = (req, res, next) => {
-    console.log('✅ 관리자 권한 확인 (Test Mode)');
-    next(); 
+    if (req.user && req.user.role === 'ADMIN') {
+        next();
+    } else {
+        res.status(403).json({ message: '관리자 권한이 필요합니다.' });
+    }
 };
