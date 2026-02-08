@@ -48,7 +48,7 @@ Redis 캐시 사용
 #### 1. 로그 파일 ..아직 미적용
 ....진행중....
 
-### 📂 Directory Structure
+## 📂 Directory Structure
 ```Plaintext
 tuk_alaf_server/
 ├── config/
@@ -74,8 +74,8 @@ tuk_alaf_server/
 └── .env                # 환경 변수 (DB_PW, JWT_SECRET 등)
 ```
 
-### 🛠 Installation & Setup
-#### 1. 환경 설정
+## 🛠 Installation & Setup
+### 1. 환경 설정
 프로젝트를 클론하고 필요한 모듈을 설치합니다.
 ```Bash
 mkdir TUK_ALAF_SERVER
@@ -94,7 +94,7 @@ npm install jsonwebtoken bcryptjs helmet
 npm install -D nodemon
 ```
 
-#### 2. 데이터베이스 세팅
+### 2. 데이터베이스 세팅
 아래의 SQL 스크립트를 실행하여 테이블을 생성하고 기초 데이터를 삽입합니다. (기존 테이블이 있다면 초기화되니 주의하세요)
 <details> <summary>👉 <b>DB 초기화 SQL 스크립트 보기 (Click)</b></summary>
   
@@ -203,7 +203,7 @@ COMMIT;
 ```
 </details>
 
-### ✅ API Test Status
+## ✅ API Test Status
 현재 임시 구현 및 테스트가 완료된 API 목록입니다.
 | Method | Endpoint | Description | Status | Note |
 | :--- | :--- | :--- | :---: | :--- |
@@ -219,7 +219,7 @@ COMMIT;
 | **POST** | `/api/kiosk/retrieve` | 보관함 문 열기 및 수령 | ✅ 완료 | `is_retrieved` 상태 업데이트 |
 | **GET** | `/uploads/:file` | 이미지 파일 로드 | ✅ 완료 | 정적 파일 서빙 |
 
-### 📝 TODO (Roadmap)
+## 📝 TODO (Roadmap)
 - [x] 관리자 승인 API: 웹 관리자 페이지에서 회수 요청을 승인/거절하는 로직 및 트랜잭션 구현
 - [x] 48시간 회수 신청 잠금(Lock): 동시 신청 방지 및 비즈니스 로직 고도화
 - [ ] 이메일 인증 API: 회원가입 시 학교 이메일(@tuk.ac.kr) 인증 로직 연동
