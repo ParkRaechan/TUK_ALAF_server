@@ -197,8 +197,29 @@ CREATE TABLE Comment (
     FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE,
     FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE
 );
+---------------------------------------------------------
+-- 더미 데이터 삽입 --
+---------------------------------------------------------
+-- 1) 카테고리
+INSERT INTO Category (name) VALUES ('전자제품'), ('지갑/현금'), ('의류'), ('도서/필기구'), ('기타');
 
+-- 2) 장소
+INSERT INTO Place (address, detail_address) VALUES 
+('경기도 시흥시 산기대학로 237 제1공학관', '1층 로비 키오스크'),
+('경기도 시흥시 산기대학로 237 도서관', '2층 안내데스크 옆');
+-- 3) 관리자 계정 하나 추가 (테스트용)
+INSERT INTO Member (name, email, password, phone_number, role) VALUES 
+('관리자', 'admin@tuk.ac.kr', 'hashed_password', '010-1234-5678', 'ADMIN');
+
+-- 4) 아이템 (새로 추가한 found_date 반영)
+INSERT INTO Item (name, place_id, category_id, found_date, status, image_url, created_at) VALUES 
+('아이폰 15 프로', 1, 1, '2026-02-12', '보관중', 'https://example.com/iphone.jpg', NOW()),
+('갈색 가죽 지갑', 1, 2, '2026-02-10', '보관중', 'https://example.com/wallet.jpg', NOW()),
+('나이키 바람막이', 2, 3, '2026-02-09', '보관중', 'https://example.com/hoodie.jpg', NOW());
+---------------------------------------------------------
+-- 4. 외래키 체크 다시 켜기 (데이터 정합성 확인)
 SET FOREIGN_KEY_CHECKS = 1;
+-- 5. 변경사항 최종 반영
 COMMIT;
 ```
 </details>
