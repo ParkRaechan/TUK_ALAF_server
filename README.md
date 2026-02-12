@@ -209,9 +209,9 @@ COMMIT;
 | :--- | :--- | :--- | :---: | :--- |
 | **POST** | `/api/auth/register` | 회원가입 | ✅ 완료 | 비밀번호 Bcrypt 암호화 저장 |
 | **POST** | `/api/auth/login` | 로그인 (JWT 발급) | ✅ 완료 | 엑세스 토큰 반환 |
-| **GET** | `/api/items` | 분실물 목록 조회 | ✅ 완료 | `is_available` 플래그 포함 |
+| **GET** | `/api/items` | 분실물 목록 조회 | ✅ 완료 | `found_date` 최신순 정렬, `category` 필터 적용, `is_available` 플래그 포함 |
 | **GET** | `/api/items/:id` | 분실물 상세 조회 | ✅ 완료 | 잠금 상태 및 남은 시간 표시 |
-| **POST** | `/api/items` | 분실물 등록 (키오스크/유저) | ✅ 완료 | `finder_id` 자동 할당 및 포인트 지급 |
+| **POST** | `/api/items` | 분실물 등록 (키오스크/유저) | ✅ 완료 | `found_date`, `finder_id` 자동 할당 및 포인트 지급 |
 | **POST** | `/api/requests` | 회수 신청 (48시간 선점) | ✅ 완료 | **트랜잭션 적용**, 48시간 잠금 로직 |
 | **GET** | `/api/admin/requests` | 관리자 - 미처리 신청 목록 | ✅ 완료 | 관리자 권한(`isAdmin`) 필수 |
 | **POST** | `/api/admin/requests/:id/process` | 관리자 - 승인/거절 처리 | ✅ 완료 | 거절 시 즉시 잠금 해제(Lock Reset) |
