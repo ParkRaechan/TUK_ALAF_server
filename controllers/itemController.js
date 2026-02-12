@@ -49,12 +49,25 @@ exports.registerItem = async (req, res) => {
 // 2. 분실물 목록 조회 (보관중인 물건만)
 exports.getItems = async (req, res) => {
     try {
-        const [rows] = await pool.query(
-            `SELECT item_id, name, image_url, created_at, status, locked_until
-             FROM Item 
-             WHERE status = '보관중' OR status = '회수신청중' 
-             ORDER BY created_at DESC`
-        );
+        // URL에서 category 쿼리 파라미터를 가져옴 (예: /api/items?category=1)
+        const { category } = req.query;        
+        let query = `
+            SELECT item_id, name, image_url, found_date, status, locked_until, category_id
+            FROM Item 
+            WHERE status IN ('보관중', '회수신청중x', '회수승인')
+        `;
+        const queryParams = [];
+
+        // 만약 카테고리 필터가 들어왔다면 조건 추가
+        if (category) {
+            query += ` AND category_id = ?`;
+            queryParams.push(category);
+        }
+
+        // 최신순 정렬 추가
+        query += ` ORDER BY found_date DESC, created_at DESC`;
+
+        const [rows] = await pool.query(query, queryParams);
         // 잠금 상태 및 신청 가능 여부 계산
         const now = new Date();
         const processedRows = rows.map(item => {
