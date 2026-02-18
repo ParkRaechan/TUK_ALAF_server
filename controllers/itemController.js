@@ -6,7 +6,9 @@ exports.registerItem = async (req, res) => {
     const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
     
     // 요청 바디 데이터
-    const { name, category_id, place_id, description, found_date } = req.body;
+    const { name, category_id, place_id, detail_address, description, found_date } = req.body;
+
+    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
     // [수정됨] 로그인한 상태(토큰 있음)라면 req.user.id를 사용, 아니면 null (익명 습득)
     const finder_id = req.user ? req.user.id : null;
@@ -21,9 +23,9 @@ exports.registerItem = async (req, res) => {
         // 1. 분실물 DB 저장
         const [result] = await conn.query(
             `INSERT INTO Item 
-            (name, category_id, place_id, description, found_date, finder_id, image_url, locker_number, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, '보관중')`,
-            [name, category_id, place_id, description, found_date, finder_id, imageUrl, locker_number]
+            (name, category_id, place_id, detail_address, description, found_date, finder_id, image_url, locker_number, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '보관중')`,
+            [name, category_id, place_id, detail_address, description, found_date, finder_id, imageUrl, locker_number]
         );
 
         // 2. 로그인한 회원이 등록했을 경우 포인트 지급 (트랜잭션 묶음)
@@ -54,7 +56,7 @@ exports.getItems = async (req, res) => {
         let query = `
             SELECT item_id, name, image_url, found_date, status, locked_until, category_id
             FROM Item 
-            WHERE status IN ('보관중', '회수신청중x', '회수승인')
+            WHERE status IN ('보관중', '회수신청중')
         `;
         const queryParams = [];
 
@@ -96,7 +98,7 @@ exports.getItemDetail = async (req, res) => {
     
     try {
         const [rows] = await pool.query(
-            `SELECT i.*, c.name AS category_name, p.address, p.detail_address 
+            `SELECT i.*, c.name AS category_name, p.address 
              FROM Item i
              JOIN Category c ON i.category_id = c.category_id
              JOIN Place p ON i.place_id = p.place_id
@@ -107,11 +109,8 @@ exports.getItemDetail = async (req, res) => {
         if (rows.length === 0) return res.status(404).json({ message: '물건 없음' });
         const item = rows[0];
         const now = new Date();
-        // 잠금 여부 계산
+        
         const isLocked = item.locked_until && new Date(item.locked_until) > now;
-        // 신청 가능 여부 판단
-        // 상태가 '보관중'이면 무조건 가능
-        // 상태가 '회수신청중'이어도 시간이 지났으면(isLocked === false) 가능
         let isAvailable = true;
         let lockMessage = null;
 
@@ -120,17 +119,17 @@ exports.getItemDetail = async (req, res) => {
             lockMessage = "이미 주인이 찾아간 물건입니다.";
         } else if (isLocked) {
             isAvailable = false;
-            // 남은 시간 계산 (선택사항)
             const diffHours = Math.ceil((new Date(item.locked_until) - now) / (1000 * 60 * 60));
             lockMessage = `다른 사용자가 회수 신청 중입니다. (잠금 해제까지 약 ${diffHours}시간 남음)`;
         }
 
         res.json({
             ...item,
-            is_available: isAvailable,  // 프론트: 이 값이 false면 버튼 비활성화 (disabled)
-            lock_message: lockMessage   // 프론트: 버튼 밑에 띄울 경고 문구
+            is_available: isAvailable,  
+            lock_message: lockMessage   
         });
     } catch (err) {
+        console.error('상세조회 에러:', err); // 에러 로그 추가
         res.status(500).json({ error: err.message });
     }
 };

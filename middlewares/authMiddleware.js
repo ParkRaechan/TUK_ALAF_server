@@ -1,9 +1,9 @@
 const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
 
-// 1. 토큰 인증 미들웨어 (Real Mode)
+// 1. 토큰 인증 미들웨어
 exports.authenticateToken = async (req, res, next) => {
-    // 헤더에서 토큰 추출: "Bearer eyJhbGci..."
+    // 헤더에서 토큰 추출
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -15,20 +15,29 @@ exports.authenticateToken = async (req, res, next) => {
         // 토큰 검증
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
-        // (선택) DB에 유저가 실제로 존재하는지 한 번 더 확인하면 더 안전함
-        // const [users] = await pool.query('SELECT * FROM Member WHERE member_id = ?', [decoded.id]);
-        // if (users.length === 0) throw new Error();
+        // [중요] DB에서 유저 존재 여부 및 최신 정보 확인
+        // SQL에서 member_id로 정의했으므로 이를 조회합니다.
+        const [users] = await pool.query(
+            'SELECT member_id, role, name FROM Member WHERE member_id = ?', 
+            [decoded.id]
+        );
 
-        // req.user에 유저 정보 저장 (컨트롤러에서 사용 가능)
+        if (users.length === 0) {
+            return res.status(403).json({ message: '존재하지 않는 사용자입니다.' });
+        }
+
+        // req.user에 DB의 최신 정보를 담아 컨트롤러로 넘김
         req.user = { 
-            id: decoded.id, 
-            role: decoded.role 
+            id: users[0].member_id, 
+            role: users[0].role,
+            name: users[0].name
         };
         
-        next(); // 통과
+        next(); 
     } catch (err) {
         console.error('JWT 인증 실패:', err.message);
-        return res.status(403).json({ message: '유효하지 않은 토큰입니다.' });
+        // 토큰 만료 시 401을 주어 프론트에서 로그아웃 처리를 유도하는 것이 좋습니다.
+        return res.status(401).json({ message: '토큰이 만료되었거나 유효하지 않습니다.' });
     }
 };
 

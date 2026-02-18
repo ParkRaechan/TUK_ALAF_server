@@ -46,7 +46,7 @@ exports.createRequest = async (req, res) => {
         await conn.query(
             `UPDATE Item 
              SET locked_until = DATE_ADD(NOW(), INTERVAL 48 HOUR), 
-                 status = 'pending' 
+                 status = '회수신청중' 
              WHERE item_id = ?`,
             [item_id]
         );
@@ -67,10 +67,15 @@ exports.createRequest = async (req, res) => {
 exports.getAdminRequests = async (req, res) => {
     try {
         const [rows] = await pool.query(
-            `SELECT r.*, m.name AS requester_name, m.email, i.name AS item_name, i.image_url AS original_image
+            `SELECT 
+                r.request_id, r.proof_description, r.proof_detail_address, r.proof_image_url, r.requested_at, r.status AS req_status,
+                m.name AS requester_name, m.email AS requester_email,
+                i.item_id, i.name AS item_name, i.image_url AS original_image, i.description AS original_desc, i.detail_address AS original_detail_address,
+                p.address AS original_address
              FROM RetrievalRequest r
              JOIN Member m ON r.requester_id = m.member_id
              JOIN Item i ON r.item_id = i.item_id
+             JOIN Place p ON i.place_id = p.place_id
              WHERE r.status = 'PENDING'
              ORDER BY r.requested_at ASC`
         );

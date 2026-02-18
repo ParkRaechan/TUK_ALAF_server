@@ -93,8 +93,21 @@ npm install jsonwebtoken bcryptjs helmet
 # 개발 도구
 npm install -D nodemon
 ```
+### 2. .env 설정
+```Bash
+PORT= # 현재 로컬 포트 사용중
+DB_HOST=localhost
+DB_USER= # MySQL root 계정 name
+DB_PASSWORD= # MySQL root 계정 비밀번호
+DB_NAME=tuk_alaf
+JWT_SECRET= # auth 코드
+JWT_EXPIRES_IN= # auth 토큰 유효기간
 
-### 2. 데이터베이스 세팅
+EMAIL_USER= # 이메일 인증 전송자(구글 이메일)
+MAIL_PASS= # 구글 설정에서 발급받은 16자리 앱 비밀번호
+```
+
+### 3. 데이터베이스 세팅
 아래의 SQL 스크립트를 실행하여 테이블을 생성하고 기초 데이터를 삽입합니다. (기존 테이블이 있다면 초기화되니 주의하세요)
 <details> <summary>👉 <b>DB 초기화 SQL 스크립트 보기 (Click)</b></summary>
   
@@ -102,32 +115,44 @@ npm install -D nodemon
 -- 1. 외래키 체크 해제
 SET FOREIGN_KEY_CHECKS = 0;
 
--- 2. 기존 테이블 초기화
-DROP TABLE IF EXISTS Comment, PostImage, Post, RetrievalRequest, Item, Notification, Member, Place, Category;
+-- 2. 기존 테이블 초기화 (새로 추가될 MajorCategory 포함)
+DROP TABLE IF EXISTS Comment, PostImage, Post, RetrievalRequest, Item, Notification, Member, Place, Category, MajorCategory;
 
 -- 3. 테이블 생성
-CREATE TABLE Category (
-    category_id INT AUTO_INCREMENT PRIMARY KEY,
+
+-- [1] MajorCategory (★ 신규: 대분류 테이블)
+CREATE TABLE MajorCategory (
+    major_category_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL
 );
 
+-- [2] Category (★ 개선: 기존 이름을 유지하면서 '소분류' 역할을 함)
+CREATE TABLE Category (
+    category_id INT AUTO_INCREMENT PRIMARY KEY,
+    major_category_id INT NOT NULL,             -- 대분류와 연결되는 외래키
+    name VARCHAR(50) NOT NULL,
+    FOREIGN KEY (major_category_id) REFERENCES MajorCategory(major_category_id) ON DELETE CASCADE
+);
+
+-- [3] Place (이름 유지, 외래키 연결을 위한 원본 유지)
 CREATE TABLE Place (
     place_id INT AUTO_INCREMENT PRIMARY KEY,
-    address VARCHAR(100) NOT NULL,
-    detail_address VARCHAR(100)
+    address VARCHAR(100) NOT NULL
 );
 
+-- [4] Member (login_id 유지)
 CREATE TABLE Member (
-    member_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    point INT DEFAULT 0,
-    has_retrieval_permission BOOLEAN DEFAULT TRUE,
-    phone_number VARCHAR(20) NOT NULL,
-    role ENUM('USER', 'ADMIN') DEFAULT 'USER'
+  member_id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(50) NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  point INT DEFAULT 0,
+  has_retrieval_permission BOOLEAN DEFAULT TRUE,
+  phone_number VARCHAR(20) NOT NULL,
+  role ENUM('USER', 'ADMIN') DEFAULT 'USER'
 );
 
+-- [5] Notification
 CREATE TABLE Notification (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
     member_id INT NOT NULL,
@@ -137,15 +162,17 @@ CREATE TABLE Notification (
     FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE
 );
 
+-- [6] Item (이름 유지: name, place_id, category_id 모두 안전하게 보존됨!)
 CREATE TABLE Item (
     item_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    finder_id INT,
-    place_id INT NOT NULL,
-    category_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,                 
+    finder_id INT,                              
+    place_id INT NOT NULL,                      
+    detail_address VARCHAR(100),
+    category_id INT NOT NULL,                   -- 소분류(Category)와 연결
     description TEXT,
     image_url VARCHAR(255),
-    locker_number INT, 
+    locker_number INT DEFAULT 1, 
     status VARCHAR(20) DEFAULT '보관중',
     found_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -156,6 +183,7 @@ CREATE TABLE Item (
     FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );
 
+-- [7] RetrievalRequest
 CREATE TABLE RetrievalRequest (
     request_id INT AUTO_INCREMENT PRIMARY KEY,
     item_id INT NOT NULL,
@@ -169,6 +197,7 @@ CREATE TABLE RetrievalRequest (
     FOREIGN KEY (requester_id) REFERENCES Member(member_id) ON DELETE CASCADE
 );
 
+-- [8] Post
 CREATE TABLE Post (
     post_id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
@@ -181,6 +210,7 @@ CREATE TABLE Post (
     FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );
 
+-- [9] PostImage
 CREATE TABLE PostImage (
     image_id INT AUTO_INCREMENT PRIMARY KEY,
     post_id INT NOT NULL,
@@ -188,6 +218,7 @@ CREATE TABLE PostImage (
     FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE
 );
 
+-- [10] Comment
 CREATE TABLE Comment (
     comment_id INT AUTO_INCREMENT PRIMARY KEY,
     post_id INT NOT NULL,
@@ -197,28 +228,62 @@ CREATE TABLE Comment (
     FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE,
     FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE
 );
----------------------------------------------------------
--- 더미 데이터 삽입 --
----------------------------------------------------------
--- 1) 카테고리
-INSERT INTO Category (name) VALUES ('전자제품'), ('지갑/현금'), ('의류'), ('도서/필기구'), ('기타');
 
--- 2) 장소
+---------------------------------------------------------
+-- 더미 데이터 삽입
+---------------------------------------------------------
+
+-- 1) 대분류 데이터 삽입 (프론트엔드 CATEGORY_DATA의 Key 값들)
+INSERT INTO MajorCategory (name) VALUES 
+('가방'), ('귀금속'), ('도서용품'), ('서류'), ('쇼핑백'), 
+('스포츠용품'), ('악기'), ('유가증권'), ('의류'), ('자동차'), 
+('전자기기'), ('지갑'), ('증명서'), ('컴퓨터'), ('카드'), 
+('현금'), ('휴대폰'), ('유류품'), ('무주물'), ('기타물품');
+
+-- 2) 소분류 데이터 삽입 (각각의 대분류 ID에 맞게 매핑)
+-- 1:가방, 2:귀금속, 3:도서용품, 4:서류, 5:쇼핑백, 6:스포츠용품, 7:악기, 8:유가증권, 9:의류, 10:자동차
+-- 11:전자기기, 12:지갑, 13:증명서, 14:컴퓨터, 15:카드, 16:현금, 17:휴대폰, 18:유류품, 19:무주물, 20:기타물품
+INSERT INTO Category (major_category_id, name) VALUES 
+(1, '여성용가방'), (1, '남성용가방'), (1, '기타가방'),
+(2, '반지'), (2, '목걸이'), (2, '귀걸이'), (2, '시계'), (2, '기타'),
+(3, '학습서적'), (3, '소설'), (3, '컴퓨터서적'), (3, '만화책'), (3, '기타서적'),
+(4, '서류'), (4, '기타물품'),
+(5, '쇼핑백'),
+(6, '스포츠용품'),
+(7, '건반악기'), (7, '타악기'), (7, '관악기'), (7, '현악기'), (7, '기타악기'),
+(8, '어음'), (8, '상품권'), (8, '채권'), (8, '기타'),
+(9, '여성의류'), (9, '남성의류'), (9, '아기의류'), (9, '모자'), (9, '신발'), (9, '기타의류'),
+(10, '자동차열쇠'), (10, '네비게이션'), (10, '자동차번호판'), (10, '임시번호판'), (10, '기타용품'),
+(11, '태블릿'), (11, '스마트워치'), (11, '무선이어폰'), (11, '카메라'), (11, '기타용품'),
+(12, '여성용지갑'), (12, '남성용지갑'), (12, '기타지갑'),
+(13, '신분증'), (13, '면허증'), (13, '여권'), (13, '기타'),
+(14, '삼성노트북'), (14, 'LG노트북'), (14, '애플노트북'), (14, '기타'),
+(15, '신용(체크)카드'), (15, '일반카드'), (15, '교통카드'), (15, '기타카드'),
+(16, '현금'),
+(17, '삼성휴대폰'), (17, 'LG휴대폰'), (17, '아이폰'), (17, '기타휴대폰'), (17, '기타통신기기'),
+(18, '무안공항유류품'), (18, '유류품'),
+(19, '무주물'),
+(20, '기타물품');
+
+-- 3) 장소 (Place) 데이터
 INSERT INTO Place (address, detail_address) VALUES 
-('경기도 시흥시 산기대학로 237 제1공학관', '1층 로비 키오스크'),
-('경기도 시흥시 산기대학로 237 도서관', '2층 안내데스크 옆');
--- 3) 관리자 계정 하나 추가 (테스트용)
-INSERT INTO Member (name, email, password, phone_number, role) VALUES 
-('관리자', 'admin@tuk.ac.kr', 'hashed_password', '010-1234-5678', 'ADMIN');
+('A동 (종합교육관)', ''), ('B동 (기계관)', ''), ('E동 (전자관)', ''), ('G동 (도서관)', ''),
+('TIP (산학융합관)', ''), ('체육관', ''), ('운동장', ''), ('기타', '');
 
--- 4) 아이템 (새로 추가한 found_date 반영)
+-- 4) 관리자 계정 
+-- auth로 인하여 회원가입을 따로 하셔야 합니다.
+
+-- 5) 아이템 (Category의 ID 중 하나를 참조)
+-- 예: 55 = 아이폰(휴대폰), 40 = 기타지갑(지갑), 28 = 신발(의류)
 INSERT INTO Item (name, place_id, category_id, found_date, status, image_url, created_at) VALUES 
-('아이폰 15 프로', 1, 1, '2026-02-12', '보관중', 'https://example.com/iphone.jpg', NOW()),
-('갈색 가죽 지갑', 1, 2, '2026-02-10', '보관중', 'https://example.com/wallet.jpg', NOW()),
-('나이키 바람막이', 2, 3, '2026-02-09', '보관중', 'https://example.com/hoodie.jpg', NOW());
+('아이폰 15 프로', 1, 55, '2026-02-12', '보관중', 'https://example.com/iphone.jpg', NOW()),
+('검은색 가죽 지갑', 1, 40, '2026-02-10', '보관중', 'https://example.com/wallet.jpg', NOW()),
+('나이키 운동화', 2, 28, '2026-02-09', '보관중', 'https://example.com/shoes.jpg', NOW());
+
 ---------------------------------------------------------
--- 4. 외래키 체크 다시 켜기 (데이터 정합성 확인)
+-- 4. 외래키 체크 다시 켜기
 SET FOREIGN_KEY_CHECKS = 1;
+
 -- 5. 변경사항 최종 반영
 COMMIT;
 ```
@@ -243,7 +308,7 @@ COMMIT;
 ## 📝 TODO (Roadmap)
 - [x] 관리자 승인 API: 웹 관리자 페이지에서 회수 요청을 승인/거절하는 로직 및 트랜잭션 구현
 - [x] 48시간 회수 신청 잠금(Lock): 동시 신청 방지 및 비즈니스 로직 고도화
-- [ ] 이메일 인증 API: 회원가입 시 학교 이메일(@tuk.ac.kr) 인증 로직 연동
+- [x] 이메일 인증 API: 회원가입 시 학교 이메일(@tuk.ac.kr) 인증 로직 연동
 - [ ] 커뮤니티(게시판) 기능: 보관함 외 직접 전달 물건을 위한 글쓰기 및 댓글 기능
 - [ ] 마이페이지 고도화: 내 포인트 내역, 내가 등록/신청한 물건 상태 추적
 - [ ] 실시간 알림 서비스: 관심 카테고리 물건 등록 시 이메일 알림(Push) 발송
