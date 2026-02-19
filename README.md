@@ -266,9 +266,9 @@ INSERT INTO Category (major_category_id, name) VALUES
 (20, '기타물품');
 
 -- 3) 장소 (Place) 데이터
-INSERT INTO Place (address, detail_address) VALUES 
-('A동 (종합교육관)', ''), ('B동 (기계관)', ''), ('E동 (전자관)', ''), ('G동 (도서관)', ''),
-('TIP (산학융합관)', ''), ('체육관', ''), ('운동장', ''), ('기타', '');
+INSERT INTO Place (address) VALUES 
+('A동 (종합교육관)'), ('B동 (기계관)'), ('E동 (전자관)'), ('G동 (도서관)'),
+('TIP (산학융합관)'), ('체육관'), ('운동장'), ('기타');
 
 -- 4) 관리자 계정 
 -- auth로 인하여 회원가입을 따로 하셔야 합니다.
