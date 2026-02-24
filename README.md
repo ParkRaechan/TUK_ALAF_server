@@ -25,15 +25,15 @@ const pool = mysql.createPool({
     timezone: '+09:00'
 });
 ```
-#### 2. Cluster Mode (PM2 - 배포 환경) 아직 미적용
-Node.js의 싱글 스레드 한계를 극복하기 위해 **PM2 클러스터 모드**를 지원합니다.
-- **Why?** 싱글 스레드는 CPU 코어를 1개만 사용하므로, 트래픽이 몰릴 때 비효율적입니다.
-- **How?** 서버 CPU 코어 개수만큼 프로세스를 복제하여 병렬 처리 성능을 극대화합니다.
-```Bash
-#설치
+#### 2. 무중단 배포 및 Cluster Mode (PM2 적용 완료 🚀)
+Node.js의 싱글 스레드 한계를 극복하고 24시간 안정적인 서버 운영을 위해 **PM2**를 도입했습니다.
+- **Why?** 터미널 접속이 끊어져도 서버가 죽지 않게(무중단 배포) 유지하며, 트래픽이 몰릴 때 CPU 코어를 최대한 활용하기 위함입니다.
+- **How?** 현재 네이버 클라우드(NCP) 우분투 환경에서 PM2를 통해 백그라운드 무중단 서비스로 동작 중입니다.
+
+```bash
+# 글로벌 설치 및 무중단 실행 (현재 서버 적용 완료)
 npm install pm2 -g
-#실행 (모든 CPU 코어 활용)
-pm2 start server.js -i max
+pm2 start server.js --name "tuk-alaf-api"
 ```
 #### 3. Redis Caching (성능 최적화) ..아직 미적용
 Redis 캐시 사용
@@ -73,6 +73,12 @@ tuk_alaf_server/
 ├── server.js           # Entry Point
 └── .env                # 환경 변수 (DB_PW, JWT_SECRET 등)
 ```
+## ☁️ Cloud Deployment (네이버 클라우드 배포 환경)
+본 서버는 현재 **Naver Cloud Platform (NCP)** 환경에 배포되어 24시간 가동 중입니다.
+
+- **OS:** Ubuntu 24.04.1 LTS
+- **Server Port:** `8080` (ACG 방화벽 인바운드 개방 완료)
+- **Process Manager:** PM2 (무중단 운영 중)
 
 ## 🛠 Installation & Setup
 ### 1. 환경 설정
@@ -82,16 +88,8 @@ mkdir TUK_ALAF_SERVER
 cd TUK_ALAF_SERVER
 
 #의존성 설치
-# 기본 프레임워크 및 DB
-npm install express mysql2 dotenv cors
-# 보안 및 인증
-npm install jsonwebtoken bcryptjs helmet
-# 로깅 및 파일 처리 (고려중)
-# npm install winston winston-daily-rotate-file morgan multer
-# 캐싱 및 유틸리티 (아직 미적용)
-# npm install ioredis
-# 개발 도구
-npm install -D nodemon
+# 기본 프레임워크, DB, 보안, 인증
+npm install
 ```
 ### 2. .env 설정
 ```Bash
@@ -290,6 +288,9 @@ COMMIT;
 </details>
 
 ## ✅ API Test Status
+- **Base URL (Local):** `http://localhost:8080/api`
+- **Base URL (Production):** `http://[NCP_공인_IP]:8080/api`
+
 현재 임시 구현 및 테스트가 완료된 API 목록입니다.
 | Method | Endpoint | Description | Status | Note |
 | :--- | :--- | :--- | :---: | :--- |
@@ -314,3 +315,5 @@ COMMIT;
 - [ ] 실시간 알림 서비스: 관심 카테고리 물건 등록 시 이메일 알림(Push) 발송
 - [ ] 보관함 제어 실제 연동: 라즈베리 파이 하드웨어 제어 신호 연동
 - [ ] 운영 보안 강화: CORS 설정, Rate Limiting(요청 횟수 제한), HTTPS 적용
+- [x] 네이버 클라우드(NCP) 우분투 서버 구축 및 MySQL 연동 완료!
+- [x] PM2를 활용한 백엔드 API 서버 24시간 무중단 배포 완료!
