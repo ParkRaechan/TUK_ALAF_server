@@ -133,13 +133,3 @@ exports.getItemDetail = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
-
-
-exports.getCategories = async (req, res) => {
-    try {
-        const [rows] = await pool.query("SELECT category_id as id, name FROM Category");
-        res.json(rows);
-    } catch (err) {
-        res.status(500).json({ error: "카테고리 조회 실패" });
-    }
-};
