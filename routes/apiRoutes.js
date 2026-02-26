@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const upload = require('../middlewares/uploadMiddleware');
-const { authenticateToken, isAdmin } = require('../middlewares/authMiddleware');
+const { authenticateToken, optionalAuthenticateToken, isAdmin } = require('../middlewares/authMiddleware');
 
 // Controller 불러오기
 const itemController = require('../controllers/itemController');
@@ -18,7 +18,7 @@ router.post('/auth/register', authController.register); // 회원가입
 router.post('/auth/login', authController.login);       // 로그인
 
 // --- [분실물 등록 & 조회] ---
-router.post('/items', authenticateToken, upload.single('image'), itemController.registerItem);
+router.post('/items', optionalAuthenticateToken, upload.single('image'), itemController.registerItem);
 router.get('/items', itemController.getItems);
 router.get('/items/:id', itemController.getItemDetail);
 router.get('/kiosk/my-requests', authenticateToken, kioskController.getMyApprovedRequests);

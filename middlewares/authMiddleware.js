@@ -49,3 +49,46 @@ exports.isAdmin = (req, res, next) => {
         res.status(403).json({ message: '관리자 권한이 필요합니다.' });
     }
 };
+
+
+// 3. [추가] 선택적 토큰 인증 미들웨어 (비회원 등록 허용)
+exports.optionalAuthenticateToken = async (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    // 1. 토큰이 아예 없거나 'null' 문자열로 오면 비회원으로 간주하고 통과!
+    if (!token || token === 'null' || token === 'undefined') {
+        req.user = null;
+        return next();
+    }
+
+    try {
+        // 2. 토큰이 있다면 검증 시도
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        const [users] = await pool.query(
+            'SELECT member_id, role, name FROM Member WHERE member_id = ?', 
+            [decoded.id]
+        );
+
+        if (users.length > 0) {
+            // 회원 정보가 정상적으로 있으면 req.user에 세팅
+            req.user = { 
+                id: users[0].member_id, 
+                role: users[0].role,
+                name: users[0].name
+            };
+        } else {
+            // DB에서 회원을 못 찾으면 비회원으로 처리
+            req.user = null; 
+        }
+        
+        next(); 
+    } catch (err) {
+        // 3. 토큰이 만료되었거나 이상한 형태(malformed)여도 
+        // 에러를 뱉지 않고 비회원(null)으로 통과시켜 줍니다.
+        console.log('선택적 인증: 유효하지 않은 토큰이므로 비회원으로 처리합니다.', err.message);
+        req.user = null;
+        next();
+    }
+};
