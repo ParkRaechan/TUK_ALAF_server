@@ -120,127 +120,127 @@ DROP TABLE IF EXISTS Comment, PostImage, Post, RetrievalRequest, Item, Notificat
 
 -- [1] MajorCategory (★ 신규: 대분류 테이블)
 CREATE TABLE MajorCategory (
-    major_category_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL
+  major_category_id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(50) NOT NULL
 );
 
 -- [2] Category (★ 개선: 기존 이름을 유지하면서 '소분류' 역할을 함)
 CREATE TABLE Category (
-    category_id INT AUTO_INCREMENT PRIMARY KEY,
-    major_category_id INT NOT NULL,             -- 대분류와 연결되는 외래키
-    name VARCHAR(50) NOT NULL,
-    FOREIGN KEY (major_category_id) REFERENCES MajorCategory(major_category_id) ON DELETE CASCADE
+  category_id INT AUTO_INCREMENT PRIMARY KEY,
+  major_category_id INT NOT NULL,             -- 대분류와 연결되는 외래키
+  name VARCHAR(50) NOT NULL,
+  FOREIGN KEY (major_category_id) REFERENCES MajorCategory(major_category_id) ON DELETE CASCADE
 );
 
 -- [3] Place (이름 유지, 외래키 연결을 위한 원본 유지)
 CREATE TABLE Place (
-    place_id INT AUTO_INCREMENT PRIMARY KEY,
-    address VARCHAR(100) NOT NULL
+  place_id INT AUTO_INCREMENT PRIMARY KEY,
+  address VARCHAR(100) NOT NULL
 );
 
 -- [4] Member (login_id 유지)
 CREATE TABLE Member (
-  member_id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(50) NOT NULL,
-  email VARCHAR(100) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  point INT DEFAULT 0,
-  has_retrieval_permission BOOLEAN DEFAULT TRUE,
-  phone_number VARCHAR(20) NOT NULL,
-  role ENUM('USER', 'ADMIN') DEFAULT 'USER'
+member_id INT AUTO_INCREMENT PRIMARY KEY,
+name VARCHAR(50) NOT NULL,
+email VARCHAR(100) UNIQUE NOT NULL,
+password VARCHAR(255) NOT NULL,
+point INT DEFAULT 0,
+has_retrieval_permission BOOLEAN DEFAULT TRUE,
+phone_number VARCHAR(20) NOT NULL,
+role ENUM('USER', 'ADMIN') DEFAULT 'USER'
 );
 
 -- [5] Notification
 CREATE TABLE Notification (
-    notification_id INT AUTO_INCREMENT PRIMARY KEY,
-    member_id INT NOT NULL,
-    category_id INT NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE,
-    FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE
+  notification_id INT AUTO_INCREMENT PRIMARY KEY,
+  member_id INT NOT NULL,
+  category_id INT NOT NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE,
+  FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE
 );
 
 -- [6] Item (이름 유지: name, place_id, category_id 모두 안전하게 보존됨!)
 CREATE TABLE Item (
-    item_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,                 
-    finder_id INT,                              
-    place_id INT NOT NULL,                      
-    detail_address VARCHAR(100),
-    category_id INT NOT NULL,                   -- 소분류(Category)와 연결
-    description TEXT,
-    image_url VARCHAR(255),
-    locker_number INT DEFAULT 1, 
-    status VARCHAR(20) DEFAULT '보관중',
-    found_date DATE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    locked_until DATETIME,
-    is_retrieved BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (finder_id) REFERENCES Member(member_id) ON DELETE SET NULL,
-    FOREIGN KEY (place_id) REFERENCES Place(place_id),
-    FOREIGN KEY (category_id) REFERENCES Category(category_id)
+  item_id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,                 
+  finder_id INT,                              
+  place_id INT NOT NULL,                      
+  detail_address VARCHAR(100),
+  category_id INT NOT NULL,                   -- 소분류(Category)와 연결
+  description TEXT,
+  image_url VARCHAR(255),
+  locker_number INT DEFAULT 1, 
+  status VARCHAR(20) DEFAULT '보관중',
+  found_date DATE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  locked_until DATETIME,
+  is_retrieved BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (finder_id) REFERENCES Member(member_id) ON DELETE SET NULL,
+  FOREIGN KEY (place_id) REFERENCES Place(place_id),
+  FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );
 
 -- [7] RetrievalRequest
 CREATE TABLE RetrievalRequest (
-    request_id INT AUTO_INCREMENT PRIMARY KEY,
-    item_id INT NOT NULL,
-    requester_id INT NOT NULL,
-    status ENUM('PENDING', 'APPROVED', 'REJECTED', 'COLLECTED') DEFAULT 'PENDING',
-    proof_image_url VARCHAR(255),
-    proof_detail_address VARCHAR(255),
-    proof_description TEXT,
-    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (item_id) REFERENCES Item(item_id) ON DELETE CASCADE,
-    FOREIGN KEY (requester_id) REFERENCES Member(member_id) ON DELETE CASCADE
+  request_id INT AUTO_INCREMENT PRIMARY KEY,
+  item_id INT NOT NULL,
+  requester_id INT NOT NULL,
+  status ENUM('PENDING', 'APPROVED', 'REJECTED', 'COLLECTED') DEFAULT 'PENDING',
+  proof_image_url VARCHAR(255),
+  proof_detail_address VARCHAR(255),
+  proof_description TEXT,
+  requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (item_id) REFERENCES Item(item_id) ON DELETE CASCADE,
+  FOREIGN KEY (requester_id) REFERENCES Member(member_id) ON DELETE CASCADE
 );
 
 -- [8] Post
 CREATE TABLE Post (
-    post_id INT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(200) NOT NULL,
-    content TEXT NOT NULL,
-    member_id INT NOT NULL,
-    post_type ENUM('LOST', 'LOOKING_FOR') NOT NULL,
-    category_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE,
-    FOREIGN KEY (category_id) REFERENCES Category(category_id)
+  post_id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(200) NOT NULL,
+  content TEXT NOT NULL,
+  member_id INT NOT NULL,
+  post_type ENUM('LOST', 'LOOKING_FOR') NOT NULL,
+  category_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE,
+  FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );
 
 -- [9] PostImage
 CREATE TABLE PostImage (
-    image_id INT AUTO_INCREMENT PRIMARY KEY,
-    post_id INT NOT NULL,
-    image_url VARCHAR(255) NOT NULL,
-    FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE
+  image_id INT AUTO_INCREMENT PRIMARY KEY,
+  post_id INT NOT NULL,
+  image_url VARCHAR(255) NOT NULL,
+  FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE
 );
 
 -- [10] Comment
 CREATE TABLE Comment (
-    comment_id INT AUTO_INCREMENT PRIMARY KEY,
-    post_id INT NOT NULL,
-    member_id INT NOT NULL,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE,
-    FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE
+  comment_id INT AUTO_INCREMENT PRIMARY KEY,
+  post_id INT NOT NULL,
+  member_id INT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE,
+  FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE
 );
 
 ---------------------------------------------------------
--- 더미 데이터 삽입
+-- 데이터 삽입
 ---------------------------------------------------------
 
 -- 1) 대분류 데이터 삽입 (프론트엔드 CATEGORY_DATA의 Key 값들)
 INSERT INTO MajorCategory (name) VALUES 
 ('가방'), ('귀금속'), ('도서용품'), ('서류'), ('쇼핑백'), 
-('스포츠용품'), ('악기'), ('유가증권'), ('의류'), ('자동차'), 
+('스포츠용품'), ('악기'), ('의류'), ('자동차'), 
 ('전자기기'), ('지갑'), ('증명서'), ('컴퓨터'), ('카드'), 
-('현금'), ('휴대폰'), ('유류품'), ('무주물'), ('기타물품');
+('현금'), ('휴대폰'), ('기타물품');
 
 -- 2) 소분류 데이터 삽입 (각각의 대분류 ID에 맞게 매핑)
--- 1:가방, 2:귀금속, 3:도서용품, 4:서류, 5:쇼핑백, 6:스포츠용품, 7:악기, 8:유가증권, 9:의류, 10:자동차
--- 11:전자기기, 12:지갑, 13:증명서, 14:컴퓨터, 15:카드, 16:현금, 17:휴대폰, 18:유류품, 19:무주물, 20:기타물품
+-- 1:가방, 2:귀금속, 3:도서용품, 4:서류, 5:쇼핑백, 6:스포츠용품, 7:악기, 8:의류, 9:자동차
+-- 10:전자기기, 11:지갑, 12:증명서, 13:컴퓨터, 14:카드, 15:현금, 16:휴대폰, 17:기타물품
 INSERT INTO Category (major_category_id, name) VALUES 
 (1, '여성용가방'), (1, '남성용가방'), (1, '기타가방'),
 (2, '반지'), (2, '목걸이'), (2, '귀걸이'), (2, '시계'), (2, '기타'),
@@ -249,35 +249,29 @@ INSERT INTO Category (major_category_id, name) VALUES
 (5, '쇼핑백'),
 (6, '스포츠용품'),
 (7, '건반악기'), (7, '타악기'), (7, '관악기'), (7, '현악기'), (7, '기타악기'),
-(8, '어음'), (8, '상품권'), (8, '채권'), (8, '기타'),
-(9, '여성의류'), (9, '남성의류'), (9, '아기의류'), (9, '모자'), (9, '신발'), (9, '기타의류'),
-(10, '자동차열쇠'), (10, '네비게이션'), (10, '자동차번호판'), (10, '임시번호판'), (10, '기타용품'),
-(11, '태블릿'), (11, '스마트워치'), (11, '무선이어폰'), (11, '카메라'), (11, '기타용품'),
-(12, '여성용지갑'), (12, '남성용지갑'), (12, '기타지갑'),
-(13, '신분증'), (13, '면허증'), (13, '여권'), (13, '기타'),
-(14, '삼성노트북'), (14, 'LG노트북'), (14, '애플노트북'), (14, '기타'),
-(15, '신용(체크)카드'), (15, '일반카드'), (15, '교통카드'), (15, '기타카드'),
-(16, '현금'),
-(17, '삼성휴대폰'), (17, 'LG휴대폰'), (17, '아이폰'), (17, '기타휴대폰'), (17, '기타통신기기'),
-(18, '무안공항유류품'), (18, '유류품'),
-(19, '무주물'),
-(20, '기타물품');
+(8, '여성의류'), (8, '남성의류'), (8, '아기의류'), (8, '모자'), (8, '신발'), (8, '기타의류'),
+(9, '자동차열쇠'), (9, '네비게이션'), (9, '자동차번호판'), (9, '임시번호판'), (9, '기타용품'),
+(10, '태블릿'), (10, '스마트워치'), (10, '무선이어폰'), (10, '카메라'), (10, '기타용품'),
+(11, '여성용지갑'), (11, '남성용지갑'), (11, '기타지갑'),
+(12, '신분증'), (12, '면허증'), (12, '여권'), (12, '기타'),
+(13, '삼성노트북'), (13, 'LG노트북'), (13, '애플노트북'), (13, '기타'),
+(14, '신용(체크)카드'), (14, '일반카드'), (14, '교통카드'), (14, '기타카드'),
+(15, '현금'),
+(16, '삼성휴대폰'), (16, 'LG휴대폰'), (16, '아이폰'), (16, '기타휴대폰'), (16, '기타통신기기'),
+(17, '기타물품');
 
 -- 3) 장소 (Place) 데이터
 INSERT INTO Place (address) VALUES 
-('A동 (종합교육관)'), ('B동 (기계관)'), ('E동 (전자관)'), ('G동 (도서관)'),
-('TIP (산학융합관)'), ('체육관'), ('운동장'), ('기타');
+('A동 (기계,디자인)'), ('B동 (기계설계,메카)'), ('C동 (에너지,전기)'), ('D동 (신소재,생명화학)'), ('E동 (SW)'), ('G동 (경영)'), ('P동 (반도체)'),
+('산학융합관(전자공학부)'), ('TIP (기술혁신파크)'), ('종합교육관 (중앙도서관)'), ('제2생활관'), ('행정동'), ('체육관'), ('창업보육센터'),
+('시흥비즈니스센터'), ('운동장'), ('주차타워'), ('TU광장 (벙커)'), ('기타 (교내)'), ('기타 (교외)');
+
 
 -- 4) 관리자 계정 
 -- auth로 인하여 회원가입을 따로 하셔야 합니다.
 
 -- 5) 아이템 (Category의 ID 중 하나를 참조)
--- 예: 55 = 아이폰(휴대폰), 40 = 기타지갑(지갑), 28 = 신발(의류)
-INSERT INTO Item (name, place_id, category_id, found_date, status, image_url, created_at) VALUES 
-('아이폰 15 프로', 1, 55, '2026-02-12', '보관중', 'https://example.com/iphone.jpg', NOW()),
-('검은색 가죽 지갑', 1, 40, '2026-02-10', '보관중', 'https://example.com/wallet.jpg', NOW()),
-('나이키 운동화', 2, 28, '2026-02-09', '보관중', 'https://example.com/shoes.jpg', NOW());
-
+-- 더미 데이터 대신 실제 상황 테스트용 데이터를 넣을 예정입니다
 ---------------------------------------------------------
 -- 4. 외래키 체크 다시 켜기
 SET FOREIGN_KEY_CHECKS = 1;
