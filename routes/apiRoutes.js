@@ -27,11 +27,7 @@ router.post('/kiosk/requests/:requestId/complete', authenticateToken, kioskContr
 router.post('/requests', authenticateToken, upload.single('image'), requestController.createRequest);
 router.get('/admin/requests', authenticateToken, isAdmin, requestController.getAdminRequests);
 router.post('/admin/requests/:requestId/process', authenticateToken, isAdmin, requestController.processRequest);
-
-/*
-// --- [키오스크 관련 라우터] ---
-router.get('/kiosk/my-items', authenticateToken, kioskController.getMyRetrievableItems);
-router.post('/kiosk/retrieve', authenticateToken, kioskController.retrieveItem);
-*/
+// --- [키오스크] 승인된 회수 목록(= 잠금장치 열 수 있는 목록) ---
+router.get("/kiosk/approved", authenticateToken, kioskController.getApprovedItems);
 
 module.exports = router;

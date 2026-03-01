@@ -1,7 +1,7 @@
 const pool = require('../config/db'); 
 
 // 1. 키오스크 - 내 회수 신청 목록 조회 (수령 가능한 '회수승인' 상태만)
-exports.getMyApprovedRequests = async (req, res) => {
+exports.getApprovedItems = async (req, res) => {
     // authMiddleware를 통과했으므로 req.user.id 에 로그인한 유저 정보가 있습니다.
     const requester_id = req.user.id; 
 
@@ -10,7 +10,7 @@ exports.getMyApprovedRequests = async (req, res) => {
         const [rows] = await pool.query(
             `SELECT 
                 r.request_id, r.requested_at, r.status AS req_status,
-                i.item_id, i.name AS item_name, i.image_url, i.locker_number, i.status AS item_status
+                i.item_id, i.name, i.image_url, i.locker_number, i.status AS item_status
              FROM RetrievalRequest r
              JOIN Item i ON r.item_id = i.item_id
              WHERE r.requester_id = ? 
