@@ -132,3 +132,91 @@ exports.processRequest = async (req, res) => {
         conn.release();
     }
 };
+
+/**
+ * ✅ (추가) 키오스크/사용자 - 승인된 회수 목록 조회
+ *  - 로그인 토큰 필요
+ *  - 키오스크는 이것만 보여야 함
+ */
+exports.getMyApproved = async (req, res) => {
+  const requester_id = req.user.id;
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT r.request_id, r.status AS request_status, r.requested_at,
+              i.item_id, i.name, i.image_url, i.locker_number, i.status AS item_status
+       FROM RetrievalRequest r
+       JOIN Item i ON r.item_id = i.item_id
+       WHERE r.requester_id = ?
+         AND r.status = 'APPROVED'
+         AND i.status = '회수승인'
+       ORDER BY r.requested_at DESC`,
+      [requester_id]
+    );
+
+    return res.json(rows);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * ✅ (추가) 키오스크 - 회수 완료 처리
+ *  - request_id 기준으로 COLLECTED 처리 + Item.status='회수완료'
+ */
+exports.collectApproved = async (req, res) => {
+  const requester_id = req.user.id;
+  const { requestId } = req.params;
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [rows] = await conn.query(
+      `SELECT request_id, item_id, status, requester_id
+       FROM RetrievalRequest
+       WHERE request_id = ? FOR UPDATE`,
+      [requestId]
+    );
+
+    if (rows.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ message: '요청 없음' });
+    }
+
+    const rr = rows[0];
+
+    // 본인 요청만 처리
+    if (rr.requester_id !== requester_id) {
+      await conn.rollback();
+      return res.status(403).json({ message: '권한 없음' });
+    }
+
+    // 승인된 건만 회수 완료 가능
+    if (rr.status !== 'APPROVED') {
+      await conn.rollback();
+      return res.status(409).json({ message: '승인된 요청만 회수 완료 처리할 수 있습니다.' });
+    }
+
+    await conn.query(
+      `UPDATE RetrievalRequest SET status = 'COLLECTED' WHERE request_id = ?`,
+      [requestId]
+    );
+
+    await conn.query(
+      `UPDATE Item
+       SET status = '회수완료', locked_until = NULL, is_retrieved = TRUE
+       WHERE item_id = ?`,
+      [rr.item_id]
+    );
+
+    await conn.commit();
+    return res.json({ message: '회수 완료 처리됨' });
+  } catch (err) {
+    await conn.rollback();
+    console.error(err);
+    return res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+};
