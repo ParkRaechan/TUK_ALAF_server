@@ -21,7 +21,6 @@ router.post('/auth/login', authController.login);       // 로그인
 router.post('/items', optionalAuthenticateToken, upload.single('image'), itemController.registerItem);
 router.get('/items', itemController.getItems);
 router.get('/items/:id', itemController.getItemDetail);
-router.get('/kiosk/my-requests', authenticateToken, kioskController.getMyApprovedRequests);
 router.post('/kiosk/requests/:requestId/complete', authenticateToken, kioskController.completeRetrieval);
 // --- [회수 신청 & 승인] ---
 router.post('/requests', authenticateToken, upload.single('image'), requestController.createRequest);
