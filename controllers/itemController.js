@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { sendNotificationEmails } = require('../utils/mailer'); // 메일러 불러오기
 
 // 1. 분실물 등록 (키오스크/관리자)
 exports.registerItem = async (req, res) => {
@@ -38,6 +39,22 @@ exports.registerItem = async (req, res) => {
 
         await conn.commit();
         res.status(201).json({ message: '분실물 등록 완료', itemId: result.insertId });
+        
+        // 이메일 발송 (응답 후 백그라운드에서 실행)
+        try {
+            // 장소 이름을 가져오기 위한 쿼리
+            const [[placeRow]] = await pool.query(
+                `SELECT address FROM Place WHERE place_id = ?`, 
+                [place_id]
+            );
+            const placeName = placeRow ? placeRow.address : '교내 어딘가';
+
+            // 메일 발송 함수 호출 (await를 쓰지 않아서 응답 지연을 막음)
+            sendNotificationEmails(newItemId, name, category_id, placeName);
+        } catch (mailErr) {
+            console.error('메일 발송 준비 중 에러:', mailErr);
+            // 메일 발송 실패가 아이템 등록 성공 응답에 영향을 주지 않도록 catch 처리
+        }
 
     } catch (err) {
         await conn.rollback();

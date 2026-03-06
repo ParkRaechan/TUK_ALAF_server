@@ -8,6 +8,7 @@ const itemController = require('../controllers/itemController');
 const requestController = require('../controllers/requestController');
 const kioskController = require('../controllers/kioskController');
 const authController = require('../controllers/authController');
+const notificationController = require('../controllers/notificationController');
 
 // 인증 관련 API
 router.post('/auth/send-code', authController.sendVerificationCode); // 인증번호 발송
@@ -29,5 +30,9 @@ router.get('/admin/requests', authenticateToken, isAdmin, requestController.getA
 router.post('/admin/requests/:requestId/process', authenticateToken, isAdmin, requestController.processRequest);
 // --- [키오스크] 승인된 회수 목록(= 잠금장치 열 수 있는 목록) ---
 router.get("/kiosk/approved", authenticateToken, kioskController.getApprovedItems);
+
+// --- [이메일 알람 신청] --- 로그인한 유저만 쓸 수 있도록 인증 미들웨어(authenticateToken)
+router.get('/alerts', authenticateToken, notificationController.getUserAlerts);
+router.post('/alerts', authenticateToken, notificationController.updateUserAlerts);
 
 module.exports = router;

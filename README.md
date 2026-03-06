@@ -154,8 +154,9 @@ role ENUM('USER', 'ADMIN') DEFAULT 'USER'
 CREATE TABLE Notification (
   notification_id INT AUTO_INCREMENT PRIMARY KEY,
   member_id INT NOT NULL,
-  category_id INT NOT NULL,
+  major_category_id INT NOT NULL,
   is_active BOOLEAN DEFAULT TRUE,
+  UNIQUE KEY unique_member_major (member_id, major_category_id),
   FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE,
   FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE
 );
