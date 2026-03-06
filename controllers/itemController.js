@@ -133,3 +133,25 @@ exports.getItemDetail = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+// 분실물 삭제 (관리자용)
+exports.deleteItem = async (req, res) => {
+    const { id } = req.params;
+    const conn = await pool.getConnection();
+    
+    try {
+        // DB에서 해당 아이템 삭제
+        const [result] = await conn.query(`DELETE FROM Item WHERE item_id = ?`, [id]);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: '해당 물건을 찾을 수 없습니다.' });
+        }
+        
+        res.status(200).json({ message: '분실물이 성공적으로 삭제되었습니다.' });
+    } catch (err) {
+        console.error('삭제 에러:', err);
+        res.status(500).json({ error: '삭제 실패' });
+    } finally {
+        conn.release();
+    }
+};
