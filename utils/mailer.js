@@ -1,7 +1,8 @@
 const nodemailer = require('nodemailer');
 const pool = require('../config/db');
+const path = require('path');
 
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 // 구글 이메일 전송 설정
 const transporter = nodemailer.createTransport({
