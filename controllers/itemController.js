@@ -28,7 +28,10 @@ exports.registerItem = async (req, res) => {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '보관중')`,
             [name, category_id, place_id, detail_address, description, found_date, finder_id, imageUrl, locker_number]
         );
-
+        
+        // 분실물 정보 저장 -> 후속 이메일 연동
+        newItemId = result.insertId;
+        
         // 2. 로그인한 회원이 등록했을 경우 포인트 지급 (트랜잭션 묶음)
         if (finder_id) {
             await conn.query(
