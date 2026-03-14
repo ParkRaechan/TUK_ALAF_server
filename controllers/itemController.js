@@ -68,11 +68,18 @@ exports.registerItem = async (req, res) => {
     }
 };
 
-// 2. 분실물 목록 조회 (보관중인 물건만)
+// 2. 분실물 목록 조회 [ver.2 - 페이징 기능 추가하여 응답속도 향상]
 exports.getItems = async (req, res) => {
     try {
-        // URL에서 category 쿼리 파라미터를 가져옴 (예: /api/items?category=1)
-        const { category } = req.query;        
+        // 1. URL에서 category와 함께 page, limit 쿼리 파라미터를 가져옴
+        // (프론트에서 안 보내면 기본값으로 1페이지, 20개씩 세팅)
+        const { category, page = 1, limit = 20 } = req.query;        
+        
+        // 2. 문자를 숫자로 확실하게 변환 (LIMIT, OFFSET에 문자열이 들어가면 DB 에러 발생 방지)
+        const pageNum = parseInt(page, 10);
+        const limitNum = parseInt(limit, 10);
+        const offset = (pageNum - 1) * limitNum;
+
         let query = `
             SELECT item_id, name, image_url, found_date, status, locked_until, category_id
             FROM Item 
@@ -80,32 +87,35 @@ exports.getItems = async (req, res) => {
         `;
         const queryParams = [];
 
-        // 만약 카테고리 필터가 들어왔다면 조건 추가
+        // 기존 로직 그대로 유지: 카테고리 필터
         if (category) {
             query += ` AND category_id = ?`;
             queryParams.push(category);
         }
 
-        // 최신순 정렬 추가
+        // 기존 로직 그대로 유지: 최신순 정렬
         query += ` ORDER BY found_date DESC, created_at DESC`;
 
+        // 3. 페이징 쿼리 추가 (항상 ORDER BY 뒤에 와야 함)
+        query += ` LIMIT ? OFFSET ?`;
+        queryParams.push(limitNum, offset);
+
         const [rows] = await pool.query(query, queryParams);
-        // 잠금 상태 및 신청 가능 여부 계산
+        
+        // 기존 로직 그대로 유지: 잠금 상태 및 신청 가능 여부 계산
         const now = new Date();
         const processedRows = rows.map(item => {
-            // 잠금 시간이 존재하고, 현재 시간보다 미래라면 잠긴 상태
             const isLocked = item.locked_until && new Date(item.locked_until) > now;
-            
-            // 신청 가능 조건: 상태가 '보관중'이거나, 잠금 시간이 지났을 때
-            // (즉, 회수신청중이어도 48시간 지났으면 다시 신청 가능하므로)
             const isAvailable = (item.status === '보관중') || (!isLocked && item.status === '회수신청중');
 
             return {
                 ...item,
-                is_available: isAvailable, // true or false
-                display_status: isAvailable ? '보관중' : '회수신청중' // 프론트 표시용 텍스트
+                is_available: isAvailable, 
+                display_status: isAvailable ? '보관중' : '회수신청중' 
             };
         });
+        
+        // 기존 프론트엔드가 고장 나지 않도록 똑같이 '배열' 형태로 반환
         res.json(processedRows);
     } catch (err) {
         res.status(500).json({ error: err.message });
