@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 
-// 4. 회수 신청 (사용자 -> 관리자 제출용) + 48시간 잠금 로직 적용
+// 1. 회수 신청 (사용자 -> 관리자 제출용) + 48시간 잠금 로직 적용
 exports.createRequest = async (req, res) => {
     const { item_id, proof_description, proof_detail_address } = req.body;
     const requester_id = req.user.id; // authMiddleware에서 옴
@@ -25,7 +25,7 @@ exports.createRequest = async (req, res) => {
         const item = items[0];
         const now = new Date();
 
-        // [핵심] 이미 누군가 신청해서 잠겨있는지(쿨타임) 확인
+        // 이미 누군가 신청해서 잠겨있는지(쿨타임) 확인
         if (item.locked_until && new Date(item.locked_until) > now) {
             await conn.rollback();
             return res.status(409).json({ // 409 Conflict
@@ -34,7 +34,7 @@ exports.createRequest = async (req, res) => {
             });
         }
 
-        // 2. 신청서 저장 (RetrievalRequest)
+        // 2. 신청서 저장
         await conn.query(
             `INSERT INTO RetrievalRequest 
              (item_id, requester_id, proof_description, proof_detail_address, proof_image_url, status)
@@ -63,7 +63,7 @@ exports.createRequest = async (req, res) => {
     }
 };
 
-// 5. 관리자 - 신청 내역 조회
+// 2. 관리자 - 신청 내역 조회
 exports.getAdminRequests = async (req, res) => {
     try {
         const [rows] = await pool.query(
@@ -85,7 +85,7 @@ exports.getAdminRequests = async (req, res) => {
     }
 };
 
-// 6. 관리자 - 승인 또는 거절 처리
+// 3. 관리자 - 승인 또는 거절 처리
 exports.processRequest = async (req, res) => {
     const { requestId } = req.params;
     const { action } = req.body; // 'APPROVE' or 'REJECT'
@@ -104,20 +104,16 @@ exports.processRequest = async (req, res) => {
 
         if (action === 'APPROVE') {
             // [승인 시]
-            // 1. 요청 상태 -> APPROVED
             await conn.query(`UPDATE RetrievalRequest SET status = 'APPROVED' WHERE request_id = ?`, [requestId]);
             
-            // 2. 아이템 상태 -> 회수승인 (이제 키오스크에서 문 열기 가능해짐)
-            // *주의: 승인되어도 locked_until은 유지하거나, 아예 수령 전까지 냅둬도 무방함.
+            // 아이템 상태 -> 회수승인 (이제 키오스크에서 문 열기 가능해짐)
             await conn.query(`UPDATE Item SET status = '회수승인' WHERE item_id = ?`, [itemId]);
 
         } else if (action === 'REJECT') {
             // [거절 시]
-            // 1. 요청 상태 -> REJECTED
             await conn.query(`UPDATE RetrievalRequest SET status = 'REJECTED' WHERE request_id = ?`, [requestId]);
             
-            // 2. 아이템 상태 -> 보관중 (원상복구)
-            // 3. [중요] 잠금 해제 (locked_until = NULL) -> 그래야 다른 사람이 다시 신청 가능!
+            // 잠금 해제 (locked_until = NULL) -> 그래야 다른 사람이 다시 신청 가능
             await conn.query(`UPDATE Item SET status = '보관중', locked_until = NULL WHERE item_id = ?`, [itemId]);
         }
 

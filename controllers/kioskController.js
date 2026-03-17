@@ -6,7 +6,7 @@ exports.getApprovedItems = async (req, res) => {
     const requester_id = req.user.id; 
 
     try {
-        // [핵심] 내가 신청한 것 중, 관리자가 'APPROVED' 했고, 아이템 상태가 '회수승인'인 것만 가져옵니다.
+        // 내가 신청한 것 중, 관리자가 'APPROVED' 했고, 아이템 상태가 '회수승인'인 것만 가져옵니다.
         const [rows] = await pool.query(
             `SELECT 
                 r.request_id, r.requested_at, r.status AS req_status,
@@ -29,7 +29,6 @@ exports.getApprovedItems = async (req, res) => {
 
 // 2. 키오스크 - 수령 완료 처리 (프론트에서 작업 끝내면 호출)
 exports.completeRetrieval = async (req, res) => {
-    // URL 파라미터로 request_id를 받는다고 가정합니다.
     const { requestId } = req.params; 
     
     const conn = await pool.getConnection();
@@ -56,7 +55,6 @@ exports.completeRetrieval = async (req, res) => {
         );
 
         // 3. Item(분실물) 상태 업데이트 -> '회수완료' 및 잠금 해제
-        // (잠금 해제는 굳이 안 해도 되지만, DB 정리를 위해 NULL 처리)
         await conn.query(
             `UPDATE Item SET status = '회수완료', locked_until = NULL WHERE item_id = ?`, 
             [itemId]

@@ -16,11 +16,11 @@ const storage = multer.diskStorage({
     destination(req, file, done) {
         done(null, 'uploads/');
     },
-    // 저장할 파일 이름 (중복 방지를 위해 날짜값 붙임)
+    // 저장할 파일 이름 (중복 방지를 위해 날짜값 붙이기)
     filename(req, file, done) {
         const ext = path.extname(file.originalname); // 확장자 추출 (.png)
         const basename = path.basename(file.originalname, ext); // 파일명 추출
-        done(null, basename + '_' + Date.now() + ext); // 예: image_170321123.png
+        done(null, basename + '_' + Date.now() + ext);
     }
 });
 

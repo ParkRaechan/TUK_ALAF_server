@@ -10,7 +10,7 @@ const app = express();
 const server = http.createServer(app);
 
 /*
-// 소켓 설정 (키오스크 제어용) (후에 기능 추가용)
+// 소켓 설정 (키오스크 제어용) (후에 기능 개선용)
 const io = new Server(server, { cors: { origin: "*" } });
 app.set('io', io); // 라우터에서 io를 쓸 수 있게 등록
 */
@@ -26,7 +26,7 @@ const apiRoutes = require('./routes/apiRoutes');
 app.use('/api', apiRoutes);
 
 /*
-// 소켓 연결 이벤트 (키오스크가 켜질 때) (후에 기능 추가용)
+// 소켓 연결 이벤트 (키오스크가 켜질 때) (후에 기능 개선용)
 io.on('connection', (socket) => {
     console.log('소켓 연결됨:', socket.id);
     

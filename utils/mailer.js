@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
         user: process.env.EMAIL_USER, // .env에서 가져옴
-        pass: process.env.EMAIL_PASS  // .env에서 가져옴
+        pass: process.env.EMAIL_PASS  // 마찬가지로
     }
 });
 

@@ -11,17 +11,17 @@ exports.registerItem = async (req, res) => {
 
     const image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
-    // [수정됨] 로그인한 상태(토큰 있음)라면 req.user.id를 사용, 아니면 null (익명 습득)
+    // 로그인한 상태(토큰 있음)라면 req.user.id를 사용, 아니면 null (익명 습득)
     const finder_id = req.user ? req.user.id : null;
 
-    // [수정됨] 보관함 번호 기본값 설정 (요청에 없으면 1번)
+    // 보관함 번호 기본값 설정 (요청에 없으면 1번)
     const locker_number = req.body.locker_number || 1;
 
     const conn = await pool.getConnection();
     try {
         await conn.beginTransaction();
 
-        // 1. 분실물 DB 저장
+        // 분실물 DB 저장
         const [result] = await conn.query(
             `INSERT INTO Item 
             (name, category_id, place_id, detail_address, description, found_date, finder_id, image_url, locker_number, status)
@@ -32,7 +32,7 @@ exports.registerItem = async (req, res) => {
         // 분실물 정보 저장 -> 후속 이메일 연동
         newItemId = result.insertId;
         
-        // 2. 로그인한 회원이 등록했을 경우 포인트 지급 (트랜잭션 묶음)
+        // 로그인한 회원이 등록했을 경우 포인트 지급 (트랜잭션 묶음)
         if (finder_id) {
             await conn.query(
                 `UPDATE Member SET point = point + 100 WHERE member_id = ?`, 
@@ -71,11 +71,10 @@ exports.registerItem = async (req, res) => {
 // 2. 분실물 목록 조회 [ver.2 - 페이징 기능 추가하여 응답속도 향상]
 exports.getItems = async (req, res) => {
     try {
-        // 1. URL에서 category와 함께 page, limit 쿼리 파라미터를 가져옴
-        // (프론트에서 안 보내면 기본값으로 1페이지, 20개씩 세팅)
+        // URL에서 category와 함께 page, limit 쿼리 파라미터를 가져옴
         const { category, page = 1, limit = 20 } = req.query;        
         
-        // 2. 문자를 숫자로 확실하게 변환 (LIMIT, OFFSET에 문자열이 들어가면 DB 에러 발생 방지)
+        // 문자를 숫자로 확실하게 변환 (LIMIT, OFFSET에 문자열이 들어가면 DB 에러 발생 방지)
         const pageNum = parseInt(page, 10);
         const limitNum = parseInt(limit, 10);
         const offset = (pageNum - 1) * limitNum;
@@ -87,22 +86,22 @@ exports.getItems = async (req, res) => {
         `;
         const queryParams = [];
 
-        // 기존 로직 그대로 유지: 카테고리 필터
+        // 카테고리 필터
         if (category) {
             query += ` AND category_id = ?`;
             queryParams.push(category);
         }
 
-        // 기존 로직 그대로 유지: 최신순 정렬
+        // 최신순 정렬
         query += ` ORDER BY found_date DESC, created_at DESC`;
 
-        // 3. 페이징 쿼리 추가 (항상 ORDER BY 뒤에 와야 함)
+        // 페이징 쿼리 추가 (항상 ORDER BY 뒤에 와야 함)
         query += ` LIMIT ? OFFSET ?`;
         queryParams.push(limitNum, offset);
 
         const [rows] = await pool.query(query, queryParams);
         
-        // 기존 로직 그대로 유지: 잠금 상태 및 신청 가능 여부 계산
+        // 잠금 상태 및 신청 가능 여부 계산
         const now = new Date();
         const processedRows = rows.map(item => {
             const isLocked = item.locked_until && new Date(item.locked_until) > now;
@@ -115,7 +114,6 @@ exports.getItems = async (req, res) => {
             };
         });
         
-        // 기존 프론트엔드가 고장 나지 않도록 똑같이 '배열' 형태로 반환
         res.json(processedRows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -164,7 +162,7 @@ exports.getItemDetail = async (req, res) => {
     }
 };
 
-// 분실물 삭제 (관리자용)
+// 4. 분실물 삭제 (관리자용)
 exports.deleteItem = async (req, res) => {
     const { id } = req.params;
     const conn = await pool.getConnection();
