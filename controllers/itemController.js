@@ -80,7 +80,7 @@ exports.getItems = async (req, res) => {
         const offset = (pageNum - 1) * limitNum;
 
         let query = `
-            SELECT item_id, name, image_url, found_date, status, locked_until, category_id
+            SELECT item_id, name, image_url, found_date, status, locked_until, category_id, view_count
             FROM Item 
             WHERE status IN ('보관중', '회수신청중')
         `;
@@ -126,7 +126,7 @@ exports.getItemDetail = async (req, res) => {
     
     try {
         await pool.query(`UPDATE Item SET view_count = view_count + 1 WHERE item_id = ?`, [id]);
-        
+
         const [rows] = await pool.query(
             `SELECT i.*, c.name AS category_name, p.address 
              FROM Item i
