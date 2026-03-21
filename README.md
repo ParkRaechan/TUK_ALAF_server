@@ -215,6 +215,7 @@ CREATE TABLE Post (
   post_type ENUM('LOST', 'LOOKING_FOR') NOT NULL,
   category_id INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  image_url VARCHAR(255) DEFAULT NULL,
   FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE,
   FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );
