@@ -9,6 +9,7 @@ const requestController = require('../controllers/requestController');
 const kioskController = require('../controllers/kioskController');
 const authController = require('../controllers/authController');
 const notificationController = require('../controllers/notificationController');
+const postController = require('../controllers/postController');
 
 // 인증 관련 API
 router.post('/auth/send-code', authController.sendVerificationCode); // 인증번호 발송
@@ -34,5 +35,12 @@ router.get("/kiosk/approved", authenticateToken, kioskController.getApprovedItem
 // --- [이메일 알람 신청] --- 로그인한 유저만 쓸 수 있도록 인증 미들웨어(authenticateToken)
 router.get('/alerts', authenticateToken, notificationController.getUserAlerts);
 router.post('/alerts', authenticateToken, notificationController.updateUserAlerts);
+
+// --- [커뮤니티(게시판) 라우터] ---
+// 커뮤니티 목록 및 상세 조회
+router.get('/posts', postController.getPosts);
+router.get('/posts/:id', postController.getPostDetail);
+// 커뮤니티 글쓰기 (회원만 가능 -> authenticateToken 적용)
+router.post('/posts', authenticateToken, upload.single('image'), postController.createPost);
 
 module.exports = router;
