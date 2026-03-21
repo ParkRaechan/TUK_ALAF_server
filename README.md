@@ -187,6 +187,7 @@ CREATE TABLE Item (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   locked_until DATETIME,
   is_retrieved BOOLEAN DEFAULT FALSE,
+  view_count INT DEFAULT 0,
   FOREIGN KEY (finder_id) REFERENCES Member(member_id) ON DELETE SET NULL,
   FOREIGN KEY (place_id) REFERENCES Place(place_id),
   FOREIGN KEY (category_id) REFERENCES Category(category_id)

@@ -125,6 +125,8 @@ exports.getItemDetail = async (req, res) => {
     const { id } = req.params;
     
     try {
+        await pool.query(`UPDATE Item SET view_count = view_count + 1 WHERE item_id = ?`, [id]);
+        
         const [rows] = await pool.query(
             `SELECT i.*, c.name AS category_name, p.address 
              FROM Item i
