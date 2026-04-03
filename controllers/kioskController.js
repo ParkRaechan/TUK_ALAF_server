@@ -50,7 +50,7 @@ exports.completeRetrieval = async (req, res) => {
 
         // 2. RetrievalRequest(신청 내역) 상태 업데이트 -> 'COMPLETED' (수령완료)
         await conn.query(
-            `UPDATE RetrievalRequest SET status = 'COMPLETED' WHERE request_id = ?`, 
+            `UPDATE RetrievalRequest SET status = 'COLLECTED' WHERE request_id = ?`, 
             [requestId]
         );
 
