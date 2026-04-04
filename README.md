@@ -40,10 +40,17 @@ pm2 start server.js --name "tuk-alaf-api"
 - **How?** DB에 10,000건의 더미 데이터를 삽입하여 부하 테스트를 진행했습니다. 전체 데이터 로드 시 224ms까지 치솟았던 초기 응답 시간(TTFB)을, `LIMIT`과 `OFFSET`을 활용한 **백엔드 페이징(Pagination) 및 프론트엔드 무한 스크롤(더보기) 아키텍처**로 개편하여 **20~30ms 수준으로 대폭 단축**시켰습니다.
 
 ##### 4. 성능 최적화 (Redis Caching 적용 완료)
-- **Why?** 잦은 조회(분실물 목록 등) 시 매번 무거운 DB 쿼리를 실행하는 것은 비효율적입니다.
-- **How?** Redis를 인메모리 캐시로 활용하여 반복되는 조회 데이터나 JWT 블랙리스트, 세션 데이터를 초고속으로 처리합니다.
-- **New:** 이메일 인증코드를 Redis에 저장하고, 발급 후 **180초 TTL**으로 자동 만료되도록 구성했습니다. 인증 완료 시 Redis에서 즉시 데이터를 삭제하여 재사용을 차단합니다.
+- **Why?** 이메일 인증번호 같은 휘발성 데이터를 RDBMS(MySQL)에 저장하면 불필요한 디스크 I/O가 발생하며, 스케줄러로 만료 데이터를 주기적으로 삭제해야 하는 오버헤드가 생깁니다.
+- **How?** 초고속 인메모리 DB인 Redis를 도입하여 성능을 극대화했습니다. 발급된 인증 코드는 Redis에 저장되며, setEx 메서드를 통해 3분(180초) TTL(Time-To-Live)을 부여하여 시간이 지나면 서버의 개입 없이 자동으로 삭제되도록 아키텍처를 구성했습니다. 또한, 인증 성공 시 즉시 캐시를 비워 재사용 공격(Replay Attack)을 차단했습니다.
+```JavaScript
+// Redis 기반 인증번호 180초 자동 만료 세팅
+const redisClient = redis.createClient({
+    url: process.env.REDIS_URL || 'redis://127.0.0.1:6379'
+});
 
+// 데이터 저장 및 TTL 180초 동시 적용
+await redisClient.setEx(`authCode:${email}`, 180, code);
+```
 ### 2) 서버 인프라 및 보안 (3중 방어 구축 🛡️)
 상용 서비스 수준의 안전한 클라우드 운영을 위해 강력한 보안 계층을 적용했습니다.
 - **네트워크 보안 (ACG 방화벽):** 네이버 클라우드 ACG를 통해 22번(SSH) 포트를 특정 개발자 IP에서만 접근 가능하도록 화이트리스트 통제 적용.
@@ -66,9 +73,10 @@ pm2 start server.js --name "tuk-alaf-api"
 ```Plaintext
 tuk_alaf_server/
 ├── config/
-│   └── db.js           # MySQL Connection Pool
+│   ├── db.js            # MySQL Connection Pool
+│   └── redis.js         # Redis Client Setup
 ├── controllers/
-│   ├── authController.js    # 회원가입/로그인/이메일 인증
+│   ├── authController.js    # 회원가입/로그인/이메일 인증 (Redis TTL 로직 적용)
 │   ├── itemController.js    # 분실물 등록/조회 (Transaction 적용)
 │   └── requestController.js # 회수 신청/승인 (Lock 로직 포함)
 ├── middlewares/
@@ -80,13 +88,14 @@ tuk_alaf_server/
 │   └── apiRoutes.js    # 라우팅 통합 관리
 ├── uploads/            # 분실물/증빙 이미지 저장소
 ├── server.js           # Entry Point
-└── .env                # 환경 변수 (DB_PW, JWT_SECRET, 이메일 정보 등)
+└── .env                # 환경 변수 (DB, JWT, Redis, 이메일 정보 등)
 ```
 ## ☁️ Cloud Deployment (네이버 클라우드 배포 환경)
 본 서버는 현재 **Naver Cloud Platform (NCP)** 환경에 배포되어 24시간 가동 중입니다.
 
 - **OS:** Ubuntu 24.04.1 LTS
 - **Server Port:** `8080` (ACG 방화벽 인바운드 개방 완료)
+- **Database:** MySQL (외부망), Redis (내부망 127.0.0.1 격리)
 - **Process Manager:** PM2 (무중단 운영 중)
 
 ## 🛠 Installation & Setup
@@ -328,6 +337,7 @@ COMMIT;
 - [x] PM2를 활용한 백엔드 API 서버 24시간 무중단 배포 완료!
 - [x] 커뮤니티(게시판) 기능: 보관함 외 직접 전달 물건을 위한 글쓰기 및 댓글 기능
 - [x] 조회수 추가
+- [x] 내부망 DB Redis 추가
 - [ ] 채팅 시스템 추가
 - [ ] 통계 시스템 추가
 - [ ] 운영 보안 강화: CORS 설정, Rate Limiting(요청 횟수 제한), HTTPS 적용
