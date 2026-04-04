@@ -2,9 +2,7 @@ const pool = require('../config/db');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
-
-// 인증번호 임시 저장소
-const verificationCodes = new Map();
+const redisClient = require('../config/redis');
 
 const signToken = (id, role) => {
     return jwt.sign({ id, role }, process.env.JWT_SECRET, {
@@ -37,10 +35,8 @@ exports.sendVerificationCode = async (req, res) => {
 
     try {
         await transporter.sendMail(mailOptions);
-        
-        verificationCodes.set(email, {
-            code,
-            expiresAt: Date.now() + 3 * 60 * 1000 
+        await redisClient.set(`verify:${email}`, code, {
+            EX: 180
         });
 
         res.status(200).json({ message: '인증번호가 발송되었습니다.' });
@@ -51,19 +47,27 @@ exports.sendVerificationCode = async (req, res) => {
 };
 
 // 2. 이메일 인증번호 확인 API
-exports.verifyCode = (req, res) => {
+exports.verifyCode = async (req, res) => {
     const { email, code } = req.body;
-    const record = verificationCodes.get(email);
 
-    if (!record) return res.status(400).json({ message: '인증번호 발송 기록이 없습니다.' });
-    if (Date.now() > record.expiresAt) {
-        verificationCodes.delete(email);
-        return res.status(400).json({ message: '인증번호가 만료되었습니다. 다시 요청해주세요.' });
+    if (!email || !code) return res.status(400).json({ message: '이메일과 인증번호를 입력해주세요.' });
+
+    try {
+        const storedCode = await redisClient.get(`verify:${email}`);
+
+        if (!storedCode) {
+            return res.status(400).json({ message: '인증번호 발송 기록이 없습니다. 다시 요청해주세요.' });
+        }
+        if (storedCode !== code) {
+            return res.status(400).json({ message: '인증번호가 일치하지 않습니다.' });
+        }
+
+        await redisClient.del(`verify:${email}`);
+        return res.status(200).json({ message: '이메일 인증이 완료되었습니다.' });
+    } catch (error) {
+        console.error('인증번호 확인 에러:', error);
+        return res.status(500).json({ error: '인증번호 확인 중 서버 에러가 발생했습니다.' });
     }
-    if (record.code !== code) return res.status(400).json({ message: '인증번호가 일치하지 않습니다.' });
-
-    verificationCodes.delete(email);
-    res.status(200).json({ message: '이메일 인증이 완료되었습니다.' });
 };
 
 // 3. 회원가입 (수정된 SQL 스키마 반영)
