@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const redisClient = require('../config/redis');
 const { sendNotificationEmails } = require('../utils/mailer'); // 메일러 불러오기
 
 // 1. 분실물 등록 (키오스크/관리자)
@@ -43,6 +44,16 @@ exports.registerItem = async (req, res) => {
         await conn.commit();
         res.status(201).json({ message: '분실물 등록 완료', itemId: result.insertId });
         
+        // 캐시 무효화: 새 아이템 등록 시 목록 캐시 삭제
+        try {
+            const cacheKeys = await redisClient.KEYS('items:*');
+            if (cacheKeys.length > 0) {
+                await redisClient.DEL(cacheKeys);
+            }
+        } catch (cacheErr) {
+            console.error('캐시 무효화 에러:', cacheErr);
+        }
+        
         // 이메일 발송 (응답 후 백그라운드에서 실행)
         try {
             // 장소 이름을 가져오기 위한 쿼리
@@ -68,19 +79,23 @@ exports.registerItem = async (req, res) => {
     }
 };
 
-// 2. 분실물 목록 조회 [ver.2 - 페이징 기능 추가하여 응답속도 향상]
+// 2. 분실물 목록 조회 [ver.3 - 커서 페이징으로 OFFSET 제거하여 성능 극대화]
 exports.getItems = async (req, res) => {
     try {
-        // URL에서 category와 함께 page, limit 쿼리 파라미터를 가져옴
-        const { category, page = 1, limit = 20 } = req.query;        
+        // URL에서 category, cursor, limit 쿼리 파라미터를 가져옴
+        const { category, cursor, limit = 20 } = req.query;
         
-        // 문자를 숫자로 확실하게 변환 (LIMIT, OFFSET에 문자열이 들어가면 DB 에러 발생 방지)
-        const pageNum = parseInt(page, 10);
         const limitNum = parseInt(limit, 10);
-        const offset = (pageNum - 1) * limitNum;
+        const cacheKey = `items:${category || 'all'}:${cursor || 'start'}:${limitNum}`;
+
+        // Redis 캐시 확인
+        const cachedData = await redisClient.GET(cacheKey);
+        if (cachedData) {
+            return res.json(JSON.parse(cachedData));
+        }
 
         let query = `
-            SELECT item_id, name, image_url, found_date, status, locked_until, category_id, view_count
+            SELECT item_id, name, image_url, found_date, status, locked_until, category_id, view_count, created_at
             FROM Item 
             WHERE status IN ('보관중', '회수신청중')
         `;
@@ -92,15 +107,29 @@ exports.getItems = async (req, res) => {
             queryParams.push(category);
         }
 
+        // 커서 기반 페이징 (OFFSET 제거)
+        if (cursor) {
+            const [lastFoundDate, lastCreatedAt] = cursor.split('_');
+            query += ` AND (found_date < ? OR (found_date = ? AND created_at < ?))`;
+            queryParams.push(lastFoundDate, lastFoundDate, lastCreatedAt);
+        }
+
         // 최신순 정렬
         query += ` ORDER BY found_date DESC, created_at DESC`;
 
-        // 페이징 쿼리 추가 (항상 ORDER BY 뒤에 와야 함)
-        query += ` LIMIT ? OFFSET ?`;
-        queryParams.push(limitNum, offset);
+        // 페이징 쿼리
+        query += ` LIMIT ?`;
+        queryParams.push(limitNum);
 
         const [rows] = await pool.query(query, queryParams);
         
+        // 다음 페이지 커서 생성
+        let nextCursor = null;
+        if (rows.length === limitNum) {
+            const lastItem = rows[rows.length - 1];
+            nextCursor = `${lastItem.found_date.toISOString()}_${lastItem.created_at.toISOString()}`;
+        }
+
         // 잠금 상태 및 신청 가능 여부 계산
         const now = new Date();
         const processedRows = rows.map(item => {
@@ -114,7 +143,15 @@ exports.getItems = async (req, res) => {
             };
         });
         
-        res.json(processedRows);
+        const result = {
+            items: processedRows,
+            nextCursor
+        };
+
+        // Redis 캐시 저장 (5분 TTL)
+        await redisClient.SETEX(cacheKey, 300, JSON.stringify(result));
+
+        res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

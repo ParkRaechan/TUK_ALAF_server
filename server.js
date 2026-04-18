@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
+const compression = require('compression');
 require('dotenv').config();
 
 const app = express();
@@ -16,6 +17,7 @@ app.set('io', io); // 라우터에서 io를 쓸 수 있게 등록
 */
 
 // 미들웨어
+app.use(compression());
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
