@@ -135,7 +135,7 @@ exports.getItemDetail = async (req, res) => {
              WHERE i.item_id = ?`, 
             [id]
         );
-        
+         
         if (rows.length === 0) return res.status(404).json({ message: '물건 없음' });
         const item = rows[0];
         const now = new Date();
