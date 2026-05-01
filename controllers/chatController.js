@@ -63,3 +63,33 @@ exports.saveMessage = async (req, res) => {
         res.status(500).json({ message: '메시지 저장 오류' });
     }
 };
+
+exports.getChatRoomList = async (req, res) => {
+    const userId = req.user.id; // 내 ID
+
+    try {
+        // CASE 문을 사용해 내가 initiator면 receiver의 이름을, 내가 receiver면 initiator의 이름을 가져옵니다.
+        const query = `
+            SELECT 
+                cr.room_id, 
+                cr.post_id, 
+                cr.item_id,
+                cr.created_at,
+                m.name AS partner_name
+            FROM ChatRoom cr
+            JOIN Member m ON m.member_id = CASE 
+                WHEN cr.initiator_id = ? THEN cr.receiver_id 
+                ELSE cr.initiator_id 
+            END
+            WHERE cr.initiator_id = ? OR cr.receiver_id = ?
+            ORDER BY cr.created_at DESC
+        `;
+        // ? 자리에 들어갈 내 ID 3개
+        const [rooms] = await db.query(query, [userId, userId, userId]);
+        
+        res.status(200).json(rooms);
+    } catch (error) {
+        console.error("🚨 [채팅방 목록 조회 오류]:", error);
+        res.status(500).json({ message: '채팅방 목록을 불러오는데 실패했습니다.' });
+    }
+};

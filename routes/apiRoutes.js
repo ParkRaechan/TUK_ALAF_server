@@ -51,5 +51,7 @@ router.post('/chat/rooms', authenticateToken, chatController.createOrGetRoom);
 router.get('/chat/rooms/:roomId/messages', authenticateToken, chatController.getChatHistory);
 // 메시지 DB 저장 (소켓으로 보내는 동시에 DB에도 저장)
 router.post('/chat/messages', authenticateToken, chatController.saveMessage);
+// 내 채팅방
+router.get('/chat/rooms', authenticateToken, chatController.getChatRoomList);
 
 module.exports = router;
