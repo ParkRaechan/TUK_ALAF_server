@@ -251,6 +251,32 @@ CREATE TABLE Comment (
   FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE
 );
 
+-- [11] ChatRoom (채팅방)
+CREATE TABLE ChatRoom (
+    room_id INT AUTO_INCREMENT PRIMARY KEY,
+    item_id INT DEFAULT NULL, 
+    post_id INT DEFAULT NULL, 
+    initiator_id INT NOT NULL,  -- 채팅을 먼저 건 사람
+    receiver_id INT NOT NULL,   -- 게시물/분실물 작성자
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (item_id) REFERENCES Item(item_id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES Post(post_id) ON DELETE CASCADE,
+    FOREIGN KEY (initiator_id) REFERENCES Member(member_id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES Member(member_id) ON DELETE CASCADE
+);
+
+-- [12] ChatMessage (채팅 메시지)
+CREATE TABLE ChatMessage (
+    message_id INT AUTO_INCREMENT PRIMARY KEY,
+    room_id INT NOT NULL,
+    sender_id INT NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (room_id) REFERENCES ChatRoom(room_id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES Member(member_id) ON DELETE CASCADE
+);
+
 -- 데이터 삽입
 
 -- 1) 대분류 데이터 삽입 (프론트엔드 CATEGORY_DATA의 Key 값들)

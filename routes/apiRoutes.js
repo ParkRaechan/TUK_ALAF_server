@@ -10,6 +10,7 @@ const kioskController = require('../controllers/kioskController');
 const authController = require('../controllers/authController');
 const notificationController = require('../controllers/notificationController');
 const postController = require('../controllers/postController');
+const chatController = require('../controllers/chatController');
 
 // 인증 관련 API
 router.post('/auth/send-code', authController.sendVerificationCode); // 인증번호 발송
@@ -42,5 +43,13 @@ router.get('/posts', postController.getPosts);
 router.get('/posts/:id', postController.getPostDetail);
 // 커뮤니티 글쓰기 (회원만 가능 -> authenticateToken 적용)
 router.post('/posts', authenticateToken, upload.single('image'), postController.createPost);
+
+// --- [채팅 라우터] ---
+// 채팅방 생성 또는 입장
+router.post('/chat/rooms', authenticateToken, chatController.createOrGetRoom);
+// 특정 채팅방의 메시지 내역 불러오기
+router.get('/chat/rooms/:roomId/messages', authenticateToken, chatController.getChatHistory);
+// 메시지 DB 저장 (소켓으로 보내는 동시에 DB에도 저장)
+router.post('/chat/messages', authenticateToken, chatController.saveMessage);
 
 module.exports = router;
