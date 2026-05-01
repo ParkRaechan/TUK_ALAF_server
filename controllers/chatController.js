@@ -2,6 +2,8 @@
 const db = require('../config/db'); // DB 설정 파일 경로
 
 exports.createOrGetRoom = async (req, res) => {
+    console.log("🔥 토큰에서 꺼낸 유저 정보:", req.user);
+    
     const { itemId, postId, receiverId } = req.body;
     const initiatorId = req.user.member_id; // 토큰에서 가져온 내 ID
 
