@@ -51,12 +51,15 @@ exports.getChatHistory = async (req, res) => {
 
 exports.saveMessage = async (req, res) => {
     const { roomId, message } = req.body;
-    const senderId = req.user.member_id;
+    const senderId = req.user.id;
     try {
+        console.log("🔥 [메시지 전송] 넘어온 body:", req.body);
+        console.log("🔥 [메시지 전송] 내 정보(user):", req.user);
         const query = `INSERT INTO ChatMessage (room_id, sender_id, message) VALUES (?, ?, ?)`;
         await db.query(query, [roomId, senderId, message]);
         res.status(201).json({ success: true });
     } catch (error) {
+        console.error("🚨 [메시지 전송 실패 이유]:", error);
         res.status(500).json({ message: '메시지 저장 오류' });
     }
 };
