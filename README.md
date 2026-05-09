@@ -1,3 +1,5 @@
+<img width="1881" height="639" alt="TUK_ALAF광고" src="https://github.com/user-attachments/assets/0185cfca-5a98-4a82-a78a-3b27d3f3655c" />
+
 # 📦 TUK_ALAF Server (TUK 분실물 찾기 프로젝트 서버)
 
 **TUK 분실물 찾기 키오스크 & 웹 서비스의 백엔드 서버**입니다.  
