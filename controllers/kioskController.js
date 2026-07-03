@@ -56,7 +56,9 @@ exports.completeRetrieval = async (req, res) => {
 
         // 3. Item(분실물) 상태 업데이트 -> '회수완료' 및 잠금 해제
         await conn.query(
-            `UPDATE Item SET status = '회수완료', locked_until = NULL WHERE item_id = ?`, 
+            `UPDATE Item 
+             SET status = '회수완료', is_retrieved = 1, locked_until = NULL 
+             WHERE item_id = ?`, 
             [itemId]
         );
 
