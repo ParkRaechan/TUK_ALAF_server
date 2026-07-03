@@ -40,10 +40,22 @@ exports.getGlobalStatistics = async (req, res) => {
       ORDER BY count DESC;
     `;
 
-    // 3가지 쿼리 동시 실행
+    // 월별 분실물 개수
+    const monthlyRegistrationQuery = `
+      SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') AS month,
+        COUNT(*) AS total_count
+      FROM Item
+      GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+      ORDER BY month DESC
+      LIMIT 6;
+    `;
+
+    // 4가지 쿼리 동시 실행
     const [matchingStats] = await db.query(matchingQuery);
     const [categoryStats] = await db.query(categoryQuery);
     const [placeStats] = await db.query(placeQuery);
+    const [monthlyRegistrationStats] = await db.query(monthlyRegistrationQuery);
 
     // 공용 데이터로 깔끔하게 리턴
     return res.status(200).json({
@@ -51,7 +63,8 @@ exports.getGlobalStatistics = async (req, res) => {
       data: {
         matchingStats,
         categoryStats,
-        placeStats
+        placeStats,
+        monthlyRegistrationStats
       }
     });
 
