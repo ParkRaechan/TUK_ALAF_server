@@ -11,6 +11,7 @@ const authController = require('../controllers/authController');
 const notificationController = require('../controllers/notificationController');
 const postController = require('../controllers/postController');
 const chatController = require('../controllers/chatController');
+const statisticsController = require('../controllers/statisticsController');
 
 // 인증 관련 API
 router.post('/auth/send-code', authController.sendVerificationCode); // 인증번호 발송
@@ -53,5 +54,9 @@ router.get('/chat/rooms/:roomId/messages', authenticateToken, chatController.get
 router.post('/chat/messages', authenticateToken, chatController.saveMessage);
 // 내 채팅방
 router.get('/chat/rooms', authenticateToken, chatController.getChatRoomList);
+
+// --- [공용 통계 대시보드 API] ---
+// 로그인 여부 상관없이 누구나 접근 가능
+router.get('/stats', statisticsController.getGlobalStatistics);
 
 module.exports = router;
