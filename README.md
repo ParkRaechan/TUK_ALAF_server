@@ -129,6 +129,7 @@ FRONTEND_URL= # 카테고리 알람시 이메일로 보내지는 내부 링크
 ```
 
 ### 3. 데이터베이스 세팅
+<img width="1408" height="768" alt="TUK_ALAF 데이터베이스 ERD" src="https://github.com/user-attachments/assets/8f5bf913-fe4e-4d74-9657-3108b7cf0855" />
 아래의 SQL 스크립트를 실행하여 테이블을 생성하고 기초 데이터를 삽입합니다. (기존 테이블이 있다면 초기화되니 주의하세요)
 <details> <summary>👉 <b>DB 초기화 SQL 스크립트 보기 (Click)</b></summary>
   
