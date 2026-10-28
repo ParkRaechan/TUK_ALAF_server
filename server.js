@@ -6,6 +6,9 @@ const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
 
+// 로거 모듈 불러오기
+const logger = require('./config/logger');
+
 const app = express();
 const server = http.createServer(app);
 
@@ -18,8 +21,16 @@ app.set('io', io); // 컨트롤러에서 io 객체를 사용할 수 있게 설�
 // 미들웨어
 app.use(cors());
 app.use(express.json());
-app.use(morgan('dev'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // 이미지
+
+// Morgan HTTP 요청 로그를 Winston 파일 로거와 연동
+app.use(
+  morgan('combined', {
+    stream: {
+      write: (message) => logger.info(message.trim()),
+    },
+  })
+);
 
 // 라우터 연결
 const apiRoutes = require('./routes/apiRoutes');
@@ -43,6 +54,12 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('클라이언트 연결 해제:', socket.id);
     });
+});
+
+// 공통 에러 처리 미들웨어
+app.use((err, req, res, next) => {
+    logger.error(`${err.status || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - IP: ${req.ip}`);
+    res.status(500).json({ error: '서버 내부 오류가 발생했습니다.' });
 });
 
 const PORT = process.env.PORT || 8080;
