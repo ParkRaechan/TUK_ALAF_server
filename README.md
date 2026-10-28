@@ -73,6 +73,10 @@ await redisClient.setEx(`authCode:${email}`, 180, code);
 - **Why?** 사용자가 매번 사이트에 들어와서 분실물을 확인하는 번거로움을 줄이기 위함입니다.
 - **How?** 사용자가 구독한 카테고리(예: 전자기기, 지갑)의 분실물이 새로 등록되는 즉시, DB를 조회하여 해당 구독자들에게 자동으로 이메일 알림과 상세 페이지 링크를 발송합니다.
 
+### 6) 데이터베이스 Query 최적화 (Indexing 적용 완료 ⚡)
+- **Why?** 데이터 누적 시 `Item` 및 `Post` 테이블의 `WHERE` 조건(카테고리/장소 필터링) 및 `ORDER BY`(최신순 정렬) 과정에서 Full Table Scan이 발생하여 조회 성능이 저하되는 문제가 있습니다.
+- **How?** 자주 조회 및 정렬되는 핵심 컬럼(`category_id`, `place_id`, `status`, `created_at`)에 B-Tree 인덱스 및 복합 인덱스를 구축하여, 데이터 탐색 복잡도를 $O(N)$에서 $O(\log N)$으로 단축시키고 DB 페이징 조회 성능을 최적화했습니다.
+
 ## 📂 Directory Structure
 ```Plaintext
 tuk_alaf_server/
@@ -132,10 +136,9 @@ FRONTEND_URL= # 카테고리 알람시 이메일로 보내지는 내부 링크
 
 ### 3. 데이터베이스 세팅
 <img width="1408" height="768" alt="TUK_ALAF 데이터베이스 ERD" src="https://github.com/user-attachments/assets/8f5bf913-fe4e-4d74-9657-3108b7cf0855" />
-아래의 SQL 스크립트를 실행하여 테이블을 생성하고 기초 데이터를 삽입합니다. (기존 테이블이 있다면 초기화되니 주의하세요)
 <details> <summary>👉 <b>DB 초기화 SQL 스크립트 보기 (Click)</b></summary>
   
-  ```SQL
+```SQL
 -- 1. 외래키 체크 해제
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -331,6 +334,38 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- 5. 변경사항 최종 반영
 COMMIT;
+
+
+-- =========================================================
+-- ++ 추가유지보수 ++    TUK_ALAF 프로젝트 DB 인덱스 최적화 SQL
+-- =========================================================
+
+-- [1] Item (분실물/습득물 핵심 테이블)
+-- 카테고리별, 장소별 검색 및 목록 조회(보관중 여부 + 최신순 정렬) 최적화
+CREATE INDEX idx_item_category ON Item(category_id);
+CREATE INDEX idx_item_place ON Item(place_id);
+CREATE INDEX idx_item_status_created ON Item(status, created_at DESC);
+
+-- [2] Post (게시판/찾아주세요 게시글)
+-- 카테고리별 조회 및 최신순 정렬 최적화
+CREATE INDEX idx_post_category ON Post(category_id);
+CREATE INDEX idx_post_created ON Post(created_at DESC);
+
+-- [3] Member (회원)
+-- 이메일 인증/로그인 및 권한 체크 (email은 이미 UNIQUE 제약으로 인덱스 자동 생성됨)
+CREATE INDEX idx_member_role ON Member(role);
+
+-- [4] Notification (알림 세팅)
+-- 특정 회원의 활성화된 알림 조회 최적화
+CREATE INDEX idx_notification_member_active ON Notification(member_id, is_active);
+
+-- [5] RetrievalRequest (회수 신청)
+-- 특정 분실물에 대한 회수 신청 상태 확인 최적화
+CREATE INDEX idx_retrieval_item_status ON RetrievalRequest(item_id, status);
+
+-- [6] ChatMessage (채팅 메시지)
+-- 특정 채팅방 내 메시지 조회 및 안읽은 메시지 카운트 최적화
+CREATE INDEX idx_chat_room_created ON ChatMessage(room_id, created_at DESC);
 ```
 </details>
 
@@ -371,4 +406,4 @@ COMMIT;
 - [x] 내부망 DB Redis 추가
 - [x] 채팅 시스템 추가
 - [x] 통계 시스템 추가
-- [ ] 운영 보안 강화: CORS 설정, Rate Limiting(요청 횟수 제한), HTTPS 적용
+- [x] sql 인덱스 추가
