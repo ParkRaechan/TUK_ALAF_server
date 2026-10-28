@@ -27,7 +27,7 @@ const pool = mysql.createPool({
     timezone: '+09:00'
 });
 ```
-##### 2. 무중단 배포 및 Cluster Mode (PM2 적용 완료 🚀)
+##### 2. PM2를 활용한 백그라운드 실행 및 프로세스 관리 (PM2 적용 완료 🚀)
 Node.js의 싱글 스레드 한계를 극복하고 24시간 안정적인 서버 운영을 위해 **PM2**를 도입했습니다.
 - **Why?** 터미널 접속이 끊어져도 서버가 죽지 않게(무중단 배포) 유지하며, 트래픽이 몰릴 때 CPU 코어를 최대한 활용하기 위함입니다.
 - **How?** 현재 네이버 클라우드(NCP) 우분투 환경에서 PM2를 통해 백그라운드 무중단 서비스로 동작 중입니다.
@@ -76,7 +76,7 @@ await redisClient.setEx(`authCode:${email}`, 180, code);
 
 ### 6) 데이터베이스 Query 최적화 (Indexing 적용 완료 ⚡)
 - **Why?** 데이터 누적 시 `Item` 및 `Post` 테이블의 `WHERE` 조건(카테고리/장소 필터링) 및 `ORDER BY`(최신순 정렬) 과정에서 Full Table Scan이 발생하여 조회 성능이 저하되는 문제가 있습니다.
-- **How?** 자주 조회 및 정렬되는 핵심 컬럼(`category_id`, `place_id`, `status`, `created_at`)에 B-Tree 인덱스 및 복합 인덱스를 구축하여, 데이터 탐색 복잡도를 $O(N)$에서 $O(\log N)$으로 단축시키고 DB 페이징 조회 성능을 최적화했습니다.
+- **How?** 자주 조회 및 정렬되는 핵심 컬럼(`category_id`, `place_id`, `status`, `created_at`)에 B-Tree 인덱스 및 복합 인덱스를 구축하여, 조회 및 정렬 조건에 맞는 인덱스를 추가하여 불필요한 전체 테이블 탐색을 줄이도록 개선하고 DB 페이징 조회 성능을 최적화했습니다.
 
 ## 📂 Directory Structure
 ```Plaintext
@@ -144,7 +144,10 @@ FRONTEND_URL= # 카테고리 알람시 이메일로 보내지는 내부 링크
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- 2. 기존 테이블 초기화 (새로 추가될 MajorCategory 포함)
-DROP TABLE IF EXISTS Comment, PostImage, Post, RetrievalRequest, Item, Notification, Member, Place, Category, MajorCategory;
+DROP TABLE IF EXISTS
+    ChatMessage, ChatRoom, Comment, PostImage, Post,
+    RetrievalRequest, Item, Notification,
+    Member, Place, Category, MajorCategory;
 
 -- 3. 테이블 생성
 
