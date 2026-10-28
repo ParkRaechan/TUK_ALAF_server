@@ -66,8 +66,9 @@ await redisClient.setEx(`authCode:${email}`, 180, code);
 - **Why?** 회수 신청 시 '잠금 시간 설정'과 '신청서 작성'은 동시에 일어나야 합니다. 하나만 성공하고 하나가 실패하면 데이터가 꼬이게 됩니다.
 - **How?** START TRANSACTION을 통해 신청-잠금-포인트 지급 로직을 하나의 원자적 단위로 묶어, 오류 발생 시 모든 작업을 이전 상태로 되돌리는(Rollback) 안전장치를 마련했습니다.
 
-### 4) 로깅
-##### 1. 오류 지속 수정 및 실시간 이용량 확인 (로그 파일....적용 진행중....)
+### 4) 중앙 집중식 로깅 및 모니터링 (Winston & Morgan 적용 완료 📝)
+- **Why?** 서버 장애나 API 에러 발생 시, 콘솔 출력(`console.log`) 방식은 서버 재시작 시 휘발되어 원인 추적이 불가능한 문제가 있습니다.
+- **How?** **`morgan`** 미들웨어로 모든 HTTP 요청 트래픽을 캡처하고, **`winston`** 라이브러리를 연동하여 날짜/수준별(Info, Error)로 로그를 파일(`combined.log`, `error.log`)에 자동 분리 기록하는 구조를 구축했습니다.
 
 ### 5) 실시간 이메일 키워드 알림 (Nodemailer 적용 완료 📧)
 - **Why?** 사용자가 매번 사이트에 들어와서 분실물을 확인하는 번거로움을 줄이기 위함입니다.
@@ -406,4 +407,5 @@ CREATE INDEX idx_chat_room_created ON ChatMessage(room_id, created_at DESC);
 - [x] 내부망 DB Redis 추가
 - [x] 채팅 시스템 추가
 - [x] 통계 시스템 추가
+- [x] 로그 시스템 추가
 - [x] sql 인덱스 추가
